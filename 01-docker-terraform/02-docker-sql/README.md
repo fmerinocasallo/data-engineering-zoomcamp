@@ -2,7 +2,8 @@
 
 ## Table of contents
 1. [`PostgreSQL` Server (`pg-server`) as a Service](#pg-server)
-2. [Securing communications from and to the PostgreSQL server](#secure-comms)
+2. [`pgAdmin` Service](#pgadmin)
+3. [Securing communications from and to the PostgreSQL server](#secure-comms)
     1. [:key: SCRAM-SHA-256 password authentication](#scram-auth)
         1. [Update PostgreSQL configuration to enforce hashed-based authentication](#pg-conf-scram-auth)
     2. [:closed_lock_with_key: SSL/TLS encryption for communications with the PostgreSQL server](#pg-server-tls)
@@ -10,7 +11,11 @@
         2. [Create a server certificate signed by the new CA](#server-cert)
         3. [Create client certificates signed by the new CA](#client-cert)
         4. [Update PostgreSQL configuration to enforce certificate-based TLS authentication](#pg-conf-tls)
-    3. [:file_folder: Initialize `PostgreSQL` database](#init-sql)
+    3. [:closed_lock_with_key: Setting up `pgAdmin` to use SSL/TLS communications](#pgadmin-tls)
+        1. [Setting up SSL/TLS in `pgAdmin`](#ssl-pgadmin)
+        2. [Setting up SSL/TLS certificates location, ownership, and permissions](#pgadmin-loc-own-perm)
+        3. [Setting up `pgAdmin` environment variables](#pgadmin-vars)
+    4. [:file_folder: Initialize `PostgreSQL` database](#init-sql)
 
 <div id="pg-server"></div>
 
@@ -60,6 +65,11 @@ services:
     networks:
       postgres_net:
         ipv4_address: ${POSTGRES_IP_ADDR:-172.19.0.1}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -p ${POSTGRES_PORT}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   [...]
 
@@ -126,6 +136,301 @@ Therefore, we update the `./pgconf/postgresql.conf` file to effectively change `
 ```
 port = 10864
 ```
+
+<div id="pgadmin"></div>
+
+## `pgAdmin` Service
+
+We use `Docker Compose` to define the `pgadmin` service and the required associated resources (i.e., `configs`, `volumes`, `secrets`, and `networks`).
+
+#### :page_facing_up: FILE `./docker-compose.yml`:
+```
+name: de_zoomcamp
+services:
+  [...]
+
+  pgadmin:
+    container_name: "pgadmin"
+    restart: unless-stopped
+    build:
+      context: ./pgadmin
+      dockerfile: pgadmin-1.Dockerfile
+    entrypoint: >
+      /bin/sh -c "
+        /pgadmin4/entrypoint.sh
+      "
+    configs:
+      - source: pgadmin-entrypoint.sh
+        target: /pgadmin4/entrypoint.sh
+      - source: pgadmin-servers.json
+        target: /pgadmin4/servers.json
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL:-user@pgadmin.com}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD:-user_password}
+      - PGADMIN_USER_CONFIG_DIR=${PGADMIN_USER_CONFIG_DIR:-user_pgadmin.com}
+      - PGADMIN_LISTEN_PORT=${PGADMIN_LISTEN_PORT:-80}
+      - PGADMIN_SERVER_JSON_FILE=${PGADMIN_SERVER_JSON_FILE}
+      - PGADMIN_ENABLE_TLS=${PGADMIN_ENABLE_TLS:-}
+    secrets:
+      - pgadmin-ca.crt
+      - pgadmin-server.crt
+      - pgadmin-server.key
+      - pgadmin-fmerinocasallo_writer.crt
+      - pgadmin-fmerinocasallo_writer.key
+      - pgadmin-fmerinocasallo_reader.crt
+      - pgadmin-fmerinocasallo_reader.key
+      - pgadmin-passfile
+    volumes:
+      - type: volume
+        source: pgadmin-data
+        target: /var/lib/pgadmin
+    ports:
+      - mode: ingress
+        target: ${PGADMIN_LISTEN_PORT:-80}
+        published: ${PGADMIN_LISTEN_PORT:-80}
+        protocol: tcp
+    networks:
+      postgres_net:
+        ipv4_address: ${PGADMIN_IP_ADDR:-172.19.0.2}
+    depends_on:
+      pg-server:
+        condition: service_healthy
+
+configs:
+  [...]
+  pgadmin-entrypoint.sh:
+    file: ./pgadmin/init/entrypoint.sh
+  pgadmin-servers.json:
+    file: ./pgadmin/conf/servers.json
+
+volumes:
+  [...]
+  pgadmin-data:
+
+secrets:
+  [...]
+  pgadmin-ca.crt:
+    file: ./pgadmin/certs/ca/server/server-ca.crt
+  pgadmin-server.crt:
+    file: ./pgadmin/certs/server/server.crt
+  pgadmin-server.key:
+    file: ./pgadmin/certs/server/server.key
+  pgadmin-fmerinocasallo_writer.crt:
+    file: ./pgadmin/certs/client/writer/fmerinocasallo_writer.crt
+  pgadmin-fmerinocasallo_writer.key:
+    file: ./pgadmin/certs/client/writer/fmerinocasallo_writer.key
+  pgadmin-fmerinocasallo_reader.crt:
+    file: ./pgadmin/certs/client/reader/fmerinocasallo_reader.crt
+  pgadmin-fmerinocasallo_reader.key:
+    file: ./pgadmin/certs/client/reader/fmerinocasallo_reader.key
+  pgadmin-passfile:
+    file: ./pgadmin/passwds/.pgpass
+
+networks:
+  postgres_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.19.0.0/24
+          gateway: 172.19.0.1
+```
+
+It is worth noticing that:
+- The official `dpage/pgadmin4` switch to the non-root user (`pgadmin`) in one of the last layers of the `Docker image` [^4].
+- There is no `pgadmin` group. Instead, some files and directories, such as `/var/lib/pgadmin/` and `/pgadmin4/entrypoint.sh` are owned by `pgadmin:root`.
+- We use `Docker configs` [^5] to store non-sensitive information outside a service's image or running containers.
+In this case, such non-sensitive information includes `pgAdmin` configuration file `servers.json` and initilizing script  `entrypoint.sh`.
+- We use `Docker secrets` to securely transfer sensitive data, such as user credentials and certificates, to specific `Docker containers` (e.g., `server.cert`, `fmerinocasallo_reader.key`).
+- We create a `named volume` (`pgadmin-data`) to allow for persistent data in `/var/lib/pgadmin`.
+- We use the aforementioned `user-defined bridge` network [^2] named `postgres_net`, providing a scoped network in which only containers attached to that network (i.e., those running the `pg-server` or `pgadmin` services) are able to communicate.
+- We assign a static IP address to the `pgadmin` service (`172.19.0.50`). Beware of assigning static IP addresses to `Docker containers` if more than one are running the very same `Docker image`.
+- We define the following file `.env`, with additional environment variables, some of them required by `pgAdmin`:
+
+#### :page_facing_up: FILE `./.env`:
+```
+[...]
+
+# pgAdmin settings
+PGADMIN_IP_ADDR=172.19.0.50
+PGADMIN_DEFAULT_EMAIL=pgadmin@pgadmin.com
+PGADMIN_DEFAULT_PASSWORD=####
+PGADMIN_USER_CONFIG_DIR=pgadmin_pgadmin.com
+PGADMIN_ENABLE_TLS=True
+PGADMIN_LISTEN_PORT=10100
+PGADMIN_SERVER_JSON_FILE=/pgadmin4/servers.json
+PGADMIN_CONFIG_CONSOLE_LOG_LEVEL=10
+```
+
+We want to enable secured commuinications with the `pgAdmin` web app using the encrypted protocol `HTTPS` instead of `HTTP`.
+In HTTPS, the communication protocol is encrypted using TLS (previously SSL), which requires SSL/TLS certificates.
+As these certificates are considered sensitive data, we want to use `Docker secrets` to securely transfer them at startup, from `host` to the `Docker container` running the `pgadmin`service.
+`pgAdmin` expects to find these certificates in `/certs/server.cert` and `/certs/server.key` [^6].
+However, `Docker` official documentation does not include any option to mount `Docker secrets` in a target location different than the default `/run/secrets/<ID_DOCKER_SECRET>`.
+As a result, we opted to define a custom `Docker image` (based on the official one: `dpage/pgadmin4`) so we can create the `/certs/` directory, which will be, later on, populated with the required SSL/TLS certificates by a custom `entrypoint.sh` script.
+
+_Note that other alternatives to transfer these certificates at startup, such as using `Docker configs` or `Docker bind mounts`, would allow to automatically mount these SSL/TLS certificates in the target directory (`/certs/server.cert` and `/certs/server.key`). However, these options are considered unsecured and, therefore, not suitable for sensitive information as these certificates._
+
+See [SSL/TLS encrypted comms with the PostgreSQL server](#tls-encryption) for more details about how to create self-signed certificates, and set up the `pg-server` and `pgAdmin` services to use these SSL/TLS certificates to secure communications with the `PostgreSQL` server run by the `pg-server` service.
+
+Next, we include the definition of our custom `Docker image` in `./pgadmin/pgadmin-1.Dockerfile` and the fragment of our custom
+`entrypoint.sh` in charge of populating the `/certs/` directory with the appropriate SSL/TLS certificates:
+
+#### :page_facing_up: FILE `./pgadmin/pgadmin-1.Dockerfile` (custom `Docker image`):
+```
+FROM dpage/pgadmin4:latest
+
+USER root
+RUN mkdir /certs \
+    && chown pgadmin:root /certs
+USER pgadmin
+
+ENTRYPOINT ["/entrypoint.sh"]
+```
+
+#### :page_facing_up: FILE `./pgadmin/init/entrypoint.sh` (custom `entrypoint.sh`):
+```
+#!/usr/bin/env sh
+
+echo -n "Setting up SSL/TLS certificates for secured (encrypted) comms with" \
+        " pgAdmin web app... "
+
+SRC_DIR=/run/secrets
+
+# Copy SSL/TLS certificates to access pgAdmin website using HTTPS instead of HTTP
+# and ensure they have the required ownership and permissions
+
+cp ${SRC_DIR}/pgadmin-server.crt /certs/server.cert
+cp ${SRC_DIR}/pgadmin-server.key /certs/server.key
+
+chown pgadmin:root /certs/server.*
+
+chmod 640 /certs/server.cert
+chmod 600 /certs/server.key
+
+echo "done"
+
+[...]
+```
+
+**Update**: Although not mentioned in the `Docker` official documentation, `Docker secrets` do accept the `target` feature [^7]. 
+
+By using the `target` feature of `Docker secrets`, we could use an alternative definition of our custom `Docker image` in `./pgadmin/pgadmin-2.Dockerfile`.
+This time, we just need to create the `/var/lib/pgadmin/storage/${PGADMIN_USER_CONFIG_DIR}/.postgresql` in advance so that this branch of the file system is owned by `pgadmin:root` instead of the default owner (`root:root`).
+Otherwise, the `pgAdmin` service would complain about not being able to read and write in `/var/lib/pgadmin/storage/` during startup.
+
+:raised_hand::speech_balloon: Please, let me know if you know how to enable SSL/TLS encryption in `pgAdmin` using the official `Docker image` (`dpage/pgadmin4`).
+
+#### :page_facing_up: FILE `./pgadmin/pgadmin-2.Dockerfile` (custom `Docker image`):
+```
+FROM dpage/pgadmin4:latest
+
+ARG PGADMIN_USER_CONFIG_DIR=user_pgadmin.com
+
+USER pgadmin
+RUN mkdir -p /var/lib/pgadmin/storage/${PGADMIN_USER_CONFIG_DIR}/.postgresql \
+    && chown pgadmin:root /var/lib/pgadmin/storage/${PGADMIN_USER_CONFIG_DIR}/.postgresql
+
+ENTRYPOINT ["/entrypoint.sh"]
+```
+
+We would need to adapt our `docker-compose.yml` file as follows:
+
+#### :page_facing_up: FILE `./docker-compose.yml`:
+```
+name: de_zoomcamp
+services:
+  [...]
+
+  pgadmin:
+    container_name: "pgadmin"
+    user: "pgadmin:root"
+    restart: unless-stopped
+    build:
+      context: ./pgadmin
+      dockerfile: pgadmin-2.Dockerfile
+      args:
+        - PGADMIN_USER_CONFIG_DIR=$PGADMIN_USER_CONFIG_DIR
+    configs:
+      - source: pgadmin-servers.json
+        target: /pgadmin4/servers.json
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL:-user@pgadmin.com}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD:-user_password}
+      - PGADMIN_USER_CONFIG_DIR=${PGADMIN_USER_CONFIG_DIR:-user_pgadmin.com}
+      - PGADMIN_LISTEN_PORT=${PGADMIN_LISTEN_PORT:-80}
+      - PGADMIN_SERVER_JSON_FILE=${PGADMIN_SERVER_JSON_FILE}
+      - PGADMIN_ENABLE_TLS=${PGADMIN_ENABLE_TLS:-}
+    secrets:
+      - source: pgadmin-server.crt
+        target: /certs/server.cert
+      - source: pgadmin-server.key
+        target: /certs/server.key
+      - source: pgadmin-ca.crt
+        target: /var/lib/pgadmin/storage/${PGADMIN_USER_CONFIG_DIR}/.postgresql/server-ca.crt
+      - source: pgadmin-fmerinocasallo_writer.crt
+        target: /var/lib/pgadmin/storage/${PGADMIN_USER_CONFIG_DIR}/.postgresql/fmerinocasallo_writer.crt
+      - source: pgadmin-fmerinocasallo_writer.key
+        target: /var/lib/pgadmin/storage/${PGADMIN_USER_CONFIG_DIR}/.postgresql/fmerinocasallo_writer.key
+      - source: pgadmin-fmerinocasallo_reader.crt
+        target: /var/lib/pgadmin/storage/${PGADMIN_USER_CONFIG_DIR}/.postgresql/fmerinocasallo_reader.crt
+      - source: pgadmin-fmerinocasallo_reader.key
+        target: /var/lib/pgadmin/storage/${PGADMIN_USER_CONFIG_DIR}/.postgresql/fmerinocasallo_reader.key
+      - source: pgadmin-passfile
+        target: /var/lib/pgadmin/storage/${PGADMIN_USER_CONFIG_DIR}/.pgpass
+    volumes:
+      - type: volume
+        source: pgadmin-data
+        target: /var/lib/pgadmin
+    ports:
+      - mode: ingress
+        target: ${PGADMIN_LISTEN_PORT:-80}
+        published: ${PGADMIN_LISTEN_PORT:-80}
+        protocol: tcp
+    networks:
+      postgres_net:
+        ipv4_address: ${PGADMIN_IP_ADDR:-172.19.0.2}
+    depends_on:
+      pg-server:
+        condition: service_healthy
+
+configs:
+  [...]
+  pgadmin-servers.json:
+    file: ./pgadmin/conf/servers.json
+
+volumes:
+  [...]
+  pgadmin-data:
+
+secrets:
+  [...]
+  pgadmin-ca.crt:
+    file: ./pgadmin/certs/ca/server/server-ca.crt
+  pgadmin-server.crt:
+    file: ./pgadmin/certs/server/server.crt
+  pgadmin-server.key:
+    file: ./pgadmin/certs/server/server.key
+  pgadmin-fmerinocasallo_writer.crt:
+    file: ./pgadmin/certs/client/writer/fmerinocasallo_writer.crt
+  pgadmin-fmerinocasallo_writer.key:
+    file: ./pgadmin/certs/client/writer/fmerinocasallo_writer.key
+  pgadmin-fmerinocasallo_reader.crt:
+    file: ./pgadmin/certs/client/reader/fmerinocasallo_reader.crt
+  pgadmin-fmerinocasallo_reader.key:
+    file: ./pgadmin/certs/client/reader/fmerinocasallo_reader.key
+  pgadmin-passfile:
+    file: ./pgadmin/passwds/.pgpass
+
+networks:
+  postgres_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.19.0.0/24
+          gateway: 172.19.0.1
+```
+
+_Note that this alternative would not require a custom `entrypoint.sh` script as before._
 
 <div id="secure-comms"></div>
 
@@ -367,6 +672,148 @@ A more tight control over authentication, enforcing certificate-based SSL/TLS
 encryption for client-server communication, enhances the database’s defense against unauthorized access and data
 breaches.
 
+<div id="pgadmin-tls"></div>
+
+## Setting up `pgAdmin` to use SSL/TLS communications
+
+Now, our `PostgreSQL` server requires encrypted communications.
+Therefore, we must set up our `pgAdmin` service to use SSL/TLS certificates to communicate with the `pg-server` service.
+In this case, where `pgAdmin` is installed in Server mode (the default mode), the following fields consider their base
+directory `<STORAGE_DIR>/<USERNAME>/`[^11][^12][^13]:
+- `passfile`
+- `sslcert`
+- `sslkey`
+- `sslrootcert`
+
+where `<STORAGE_DIR>` points to `/var/lib/pgadmin/storage/` by default and `<USERNAME>` refers to the
+`${PGADMIN_DEFAULT_EMAIL}` environment variable but replacing `_` by `@` (e.g., `foo_bar.org` instead of `foo@bar.org`).
+Next, we include the default values for some of the aforementioned fields:
+- `sslcert`: `<STORAGE_DIR>/<USERNAME>/.postgresql/postgresql.crt`
+- `sslkey`: `<STORAGE_DIR>/<USERNAME>/.postgresql/postgresql.key`
+- `sslrootcert`: `~/.postgresql/root.crt`
+
+We are interested in executing queries from users `fmerinocasallo_writer` and `fmerinocasallo_reader` from our
+`pgAdmin` server through encrypted communications with our `PostgreSQL` server.
+Therefore, we will automatically add two different `Servers` in `pgAdmin` through a `servers.json` file:
+
+#### :page_facing_up: FILE `./pgadmin/conf/servers.json`:
+```
+{
+    "Servers": {
+        "1": {
+            "Name": "PostgreSQL Server [Read&Write]",
+            "Group": "Servers",
+            "Host": "172.19.0.70",
+            "HostAddr": "172.19.0.70",
+            "Port": 10864,
+            "Username": "fmerinocasallo_writer",
+            "Comment": "Read&Write user",
+            "MaintenanceDB": "de_zoomcamp",
+            "DBRestriction": "de_zoomcamp",
+            "ConnectionParameters": {
+            	"passfile": "/.pgpass",
+            	"sslmode": "require",
+            	"sslcert": "/.postgresql/pgadmin_fmerinocasallo_writer.crt",
+            	"sslkey": "/.postgresql/pgadmin_fmerinocasallo_writer.key",
+            	"sslrootcert": "/.postgresql/pgadmin_ca.crt"
+	        }
+        },
+        "2": {
+            "Name": "PostgreSQL Server [Read-Only]",
+            "Group": "Servers",
+            "Host": "172.19.0.70",
+            "HostAddr": "172.19.0.70",
+            "Port": 10864,
+            "Username": "fmerinocasallo_reader",
+            "Comment": "Read-only user",
+            "MaintenanceDB": "de_zoomcamp",
+            "DBRestriction": "de_zoomcamp",
+	        "ConnectionParameters": {
+            	"passfile": "/.pgpass",
+            	"sslmode": "require",
+            	"sslcert": "/.postgresql/pgadmin_fmerinocasallo_reader.crt",
+            	"sslkey": "/.postgresql/pgadmin_fmerinocasallo_reader.key",
+            	"sslrootcert": "/.postgresql/pgadmin_ca.crt"
+	        }
+        }
+    }
+}
+```
+
+It is worth to mention that:
+- We have defined the `${PGADMIN_SERVER_JSON_FILE}` environment variable in the `./.env` file so that it stores the location of this `servers.json` file.
+- Although we are using absolute paths for fields `passfile`, `sslcert`, `sslkey`, and `sslrootcert`, `pgAdmin` expects these files not in the root directory of the filesystem (`/`) but in the base directory previously mentioned.
+For our specific case, the base directory is `/var/lib/pgadmin/storage/pgadmin_pgadmin.com`. As a result, `pgAdmin`expects to find the `sslrootcert` in `/var/lib/pgadmin/storage/pgadmin_pgadmin.com/.postgresql/pgadmin_ca.crt`.
+
+<div id="pgadmin-loc-own-perm"></div>
+
+### Setting up SSL/TLS certificates location, ownership, and permissions
+
+The required SSL/TLS certificates enabling encrypted communications between the `pgAdmin` and `PostgreSQL` server are 
+loaded into the `Docker container` as `secrets` for security purposes.
+Thus, they are initially located in the `/run/secrets/` directory of the `Docker` container.
+However, as previously discussed, `pgAdmin` expects them to find them in `<STORAGE_DIR>/<USERNAME>/.postgresql/`.
+Therefore, we change the `ENTRYPOINT` of the `Docker image` we will use to run `pgAdmin` using `Docker containers`.
+Now, we will run a custom `entrypoint.sh` shell script to make sure the `passfile` and SSL/TLS certificates (e.g., `pgadmin_fmerinocasallo_writer.crt`, `pgadmin_fmerinocasallo_reader.key`, and `server-ca.crt`) are in the right directory, owned by the right user and group (`pgadmin:root`), and have the right permissions.
+
+#### :page_facing_up: FILE `./pgadmin/init/entrypoint.sh`:
+```
+#!/usr/bin/env sh
+
+echo -n "Setting up PassFile & SSL/TLS certificates for secured" \
+"(encrypted) comms with the PostgreSQL server... "
+
+SRC_DIR=/run/secrets
+DST_DIR=/var/lib/pgadmin/storage/${PGADMIN_USER_CONFIG_DIR}
+
+PASS_FILE=${DST_DIR}/.pgpass
+CERT_DIR=${DST_DIR}/.postgresql
+
+# Create file structure required to support SSL/TLS comms with the PostgreSQL
+# server
+mkdir -p ${CERT_DIR}
+
+# Copy .pgpass file and SSL/TLS certificates to its final destination so that
+# pgAdmin can automatically logging in in the PostgreSQL server as a valid user
+# through SSL/TLS comms
+cp ${SRC_DIR}/pgadmin_passfile ${PASS_FILE}
+find ${SRC_DIR} -name \*.crt -exec cp '{}' /${CERT_DIR} \; -o -name \*.key -exec cp '{}' ${CERT_DIR} \;
+
+# Make sure the new file structure has the required ownership and permissions
+chown -R pgadmin:root ${DST_DIR}
+chmod 600 ${PASS_FILE}
+find ${CERT_DIR} -name \*.crt -exec chmod 640 '{}' \; -o -name \*.key -exec chmod 600 '{}' \;
+
+echo "done"
+
+sh /entrypoint.sh
+```
+
+_Note that we end our custom `entrypoint.sh` shell script by calling the original `entrypoint.sh` included in the official `pgAdmin` `Docker` image._
+
+<div id="pgadmin-vars"></div>
+
+### Setting up `pgAdmin` environment variables
+
+As previously mentioned, we need to declare several environment variables for our `pgAdmin` service.
+Therefore, we include the following declarations in a `.env` file:
+
+#### :page_facing_up: FILE `./.env`:
+```
+# pgAdmin settings
+PGADMIN_DEFAULT_EMAIL=pgadmin@pgadmin.com
+PGADMIN_DEFAULT_PASSWORD=XXXX
+PGADMIN_USER_CONFIG_DIR=pgadmin_pgadmin.com
+PGADMIN_ENABLE_TLS=True
+PGADMIN_LISTEN_PORT=10100
+PGADMIN_SERVER_JSON_FILE=/pgadmin4/servers.json
+PGADMIN_CONFIG_CONSOLE_LOG_LEVEL=10
+```
+
+These will enforce secured communications between the browser and the `pgAdmin` service (`PGADMIN_ENABLE_TLS=True`) and modify its listening port (`PGADMIN_LISTEN_PORT=10100`; Security through obscurity [^3]).
+
+See the official `pgAdmin` documentation for more information about these and other variables accepted by  the `Docker container` at startup [^14].
+
 <div id="init-sql"></div>
 
 ## :file_folder: Initialize `PostgreSQL`'s DB through the `init.sql` script
@@ -460,3 +907,9 @@ https://www.postgresql.org/docs/current/runtime-config-connection.html
 [^9]: From chapter 21.5. Password Authentication (accessed on 22/06/2024):
 https://www.postgresql.org/docs/current/auth-password.html
 [^10]: From chapter 19.9. Secure TCP/IP Connections with SSL (accessed on 22/06/2024): https://www.postgresql.org/docs/current/ssl-tcp.html
+[^11]: From pgAdmin 4 8.11 documentation » Managing Database Objects » Subscription Dialog (accessed on 22/08/2024):
+https://www.pgadmin.org/docs/pgadmin4/latest/subscription_dialog.html
+[^12]: From Docker official repo (GitHub) Issues Tracker: External database with PGPASS file not working #6741 (accessed 22/08/2024): https://github.com/pgadmin-org/pgadmin4/issues/6741#issuecomment-1722212595
+[^13]: _Note that if `pgAdmin` is installed in Desktop mode, the base directory of the aforementioned fields would be:
+`~/` (the `$HOME` directory of the current user)._
+[^14]: From pgAdmin 4 8.11 documentation » Getting Started » Deployment » Container Deployment (accessed on 27/08/2024): https://www.pgadmin.org/docs/pgadmin4/latest/container_deployment.html#environment-variables
