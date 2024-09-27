@@ -448,8 +448,7 @@ security and establish strict controls over what authenticated users can do.
 It also limits database access for specific users.
 
 
-[^1]: From Docker official blog: 
-Understanding the Docker USER Instruction (accessed 23/08/2024): https://www.docker.com/blog/understanding-the-docker-user-instruction/
+[^1]: From Docker official blog: Understanding the Docker USER Instruction (accessed 23/08/2024): https://www.docker.com/blog/understanding-the-docker-user-instruction/
 [^2]: From Docker official documentation: Bridge network driver (accessed 23/08/2024): https://docs.docker.com/engine/network/drivers/bridge/
 [^3]: From Wikipedia's entry about Security by obscurity (accessed on 29/08/2024): https://en.wikipedia.org/wiki/Security_through_obscurity
 [^4]: From Docker Hub. dpage/pgadmin4:latest (accessed 23/08/2024): https://hub.docker.com/layers/dpage/pgadmin4/latest/images/sha256-e77d1cd589e52a74088fd9ecda60898dd113bd41c4b3fb6fe5b71f32935e8634?context=explore
