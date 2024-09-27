@@ -14,7 +14,6 @@ exit 1
 
 args=$(getopt -a -o hd: -l help,n_days: -- "$@")
 if [[ $? -gt 0 ]]; then
-    echo "Hi there!"
     usage
 fi
 
