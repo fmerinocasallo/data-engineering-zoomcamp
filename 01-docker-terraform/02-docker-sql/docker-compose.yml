@@ -46,17 +46,18 @@ services:
 
   pgadmin:
     container_name: "pgadmin"
+    user: "pgadmin:root"
     restart: unless-stopped
     build:
       context: ./pgadmin
-      dockerfile: Dockerfile
-    entrypoint: >
-      /bin/sh -c "
-        /pgadmin4/entrypoint.sh
-      "
+      dockerfile: pgadmin-2.Dockerfile
+      args:
+        - PGADMIN_USER_CONFIG_DIR=$PGADMIN_USER_CONFIG_DIR
+    # entrypoint: >
+    #   /bin/sh -c "
+    #     /pgadmin4/entrypoint.sh
+    #   "
     configs:
-      - source: pgadmin-entrypoint.sh
-        target: /pgadmin4/entrypoint.sh
       - source: pgadmin-servers.json
         target: /pgadmin4/servers.json
     environment:
@@ -67,14 +68,22 @@ services:
       - PGADMIN_SERVER_JSON_FILE=${PGADMIN_SERVER_JSON_FILE}
       - PGADMIN_ENABLE_TLS=${PGADMIN_ENABLE_TLS:-}
     secrets:
-      - pgadmin-ca.crt
-      - pgadmin-server.crt
-      - pgadmin-server.key
-      - pgadmin-fmerinocasallo_writer.crt
-      - pgadmin-fmerinocasallo_writer.key
-      - pgadmin-fmerinocasallo_reader.crt
-      - pgadmin-fmerinocasallo_reader.key
-      - pgadmin-passfile
+      - source: pgadmin-server.crt
+        target: /certs/server.cert
+      - source: pgadmin-server.key
+        target: /certs/server.key
+      - source: pgadmin-ca.crt
+        target: /var/lib/pgadmin/storage/${PGADMIN_USER_CONFIG_DIR}/.postgresql/server-ca.crt
+      - source: pgadmin-fmerinocasallo_writer.crt
+        target: /var/lib/pgadmin/storage/${PGADMIN_USER_CONFIG_DIR}/.postgresql/fmerinocasallo_writer.crt
+      - source: pgadmin-fmerinocasallo_writer.key
+        target: /var/lib/pgadmin/storage/${PGADMIN_USER_CONFIG_DIR}/.postgresql/fmerinocasallo_writer.key
+      - source: pgadmin-fmerinocasallo_reader.crt
+        target: /var/lib/pgadmin/storage/${PGADMIN_USER_CONFIG_DIR}/.postgresql/fmerinocasallo_reader.crt
+      - source: pgadmin-fmerinocasallo_reader.key
+        target: /var/lib/pgadmin/storage/${PGADMIN_USER_CONFIG_DIR}/.postgresql/fmerinocasallo_reader.key
+      - source: pgadmin-passfile
+        target: /var/lib/pgadmin/storage/${PGADMIN_USER_CONFIG_DIR}/.pgpass
     volumes:
       - type: volume
         source: pgadmin-data
@@ -91,6 +100,53 @@ services:
       pg-server:
         condition: service_healthy
 
+  # pgadmin:
+  #   container_name: "pgadmin"
+  #   restart: unless-stopped
+  #   build:
+  #     context: ./pgadmin
+  #     dockerfile: Dockerfile
+  #   entrypoint: >
+  #     /bin/sh -c "
+  #       /pgadmin4/entrypoint.sh
+  #     "
+  #   configs:
+  #     - source: pgadmin-entrypoint.sh
+  #       target: /pgadmin4/entrypoint.sh
+  #     - source: pgadmin-servers.json
+  #       target: /pgadmin4/servers.json
+  #   environment:
+  #     - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL:-user@pgadmin.com}
+  #     - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD:-user_password}
+  #     - PGADMIN_USER_CONFIG_DIR=${PGADMIN_USER_CONFIG_DIR:-user_pgadmin.com}
+  #     - PGADMIN_LISTEN_PORT=${PGADMIN_LISTEN_PORT:-80}
+  #     - PGADMIN_SERVER_JSON_FILE=${PGADMIN_SERVER_JSON_FILE}
+  #     - PGADMIN_ENABLE_TLS=${PGADMIN_ENABLE_TLS:-}
+  #   secrets:
+  #     - pgadmin-ca.crt
+  #     - pgadmin-server.crt
+  #     - pgadmin-server.key
+  #     - pgadmin-fmerinocasallo_writer.crt
+  #     - pgadmin-fmerinocasallo_writer.key
+  #     - pgadmin-fmerinocasallo_reader.crt
+  #     - pgadmin-fmerinocasallo_reader.key
+  #     - pgadmin-passfile
+  #   volumes:
+  #     - type: volume
+  #       source: pgadmin-data
+  #       target: /var/lib/pgadmin
+  #   ports:
+  #     - mode: ingress
+  #       target: ${PGADMIN_LISTEN_PORT:-80}
+  #       published: ${PGADMIN_LISTEN_PORT:-80}
+  #       protocol: tcp
+  #   networks:
+  #     postgres_net:
+  #       ipv4_address: ${PGADMIN_IP_ADDR:-172.19.0.2}
+  #   depends_on:
+  #     pg-server:
+  #       condition: service_healthy
+
 
 configs:
   pg-init_db.sql:
@@ -101,8 +157,8 @@ configs:
     file: ./pg-server/conf/pg_hba.conf
   pg-postgresql.conf:
     file: ./pg-server/conf/postgresql.conf
-  pgadmin-entrypoint.sh:
-    file: ./pgadmin/init/entrypoint.sh
+  # pgadmin-entrypoint.sh:
+  #   file: ./pgadmin/init/entrypoint.sh
   pgadmin-servers.json:
     file: ./pgadmin/conf/servers.json
 
