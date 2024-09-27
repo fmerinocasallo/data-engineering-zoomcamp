@@ -38,6 +38,59 @@ services:
     networks:
       postgres_net:
         ipv4_address: ${POSTGRES_IP_ADDR:-172.19.0.1}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -p ${POSTGRES_PORT}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  pgadmin:
+    container_name: "pgadmin"
+    restart: unless-stopped
+    build:
+      context: ./pgadmin
+      dockerfile: Dockerfile
+    entrypoint: >
+      /bin/sh -c "
+        /pgadmin4/entrypoint.sh
+      "
+    configs:
+      - source: pgadmin-entrypoint.sh
+        target: /pgadmin4/entrypoint.sh
+      - source: pgadmin-servers.json
+        target: /pgadmin4/servers.json
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL:-user@pgadmin.com}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD:-user_password}
+      - PGADMIN_USER_CONFIG_DIR=${PGADMIN_USER_CONFIG_DIR:-user_pgadmin.com}
+      - PGADMIN_LISTEN_PORT=${PGADMIN_LISTEN_PORT:-80}
+      - PGADMIN_SERVER_JSON_FILE=${PGADMIN_SERVER_JSON_FILE}
+      - PGADMIN_ENABLE_TLS=${PGADMIN_ENABLE_TLS:-}
+    secrets:
+      - pgadmin-ca.crt
+      - pgadmin-server.crt
+      - pgadmin-server.key
+      - pgadmin-fmerinocasallo_writer.crt
+      - pgadmin-fmerinocasallo_writer.key
+      - pgadmin-fmerinocasallo_reader.crt
+      - pgadmin-fmerinocasallo_reader.key
+      - pgadmin-passfile
+    volumes:
+      - type: volume
+        source: pgadmin-data
+        target: /var/lib/pgadmin
+    ports:
+      - mode: ingress
+        target: ${PGADMIN_LISTEN_PORT:-80}
+        published: ${PGADMIN_LISTEN_PORT:-80}
+        protocol: tcp
+    networks:
+      postgres_net:
+        ipv4_address: ${PGADMIN_IP_ADDR:-172.19.0.2}
+    depends_on:
+      pg-server:
+        condition: service_healthy
+
 
 configs:
   pg-init_db.sql:
@@ -48,9 +101,14 @@ configs:
     file: ./pg-server/conf/pg_hba.conf
   pg-postgresql.conf:
     file: ./pg-server/conf/postgresql.conf
+  pgadmin-entrypoint.sh:
+    file: ./pgadmin/init/entrypoint.sh
+  pgadmin-servers.json:
+    file: ./pgadmin/conf/servers.json
 
 volumes:
   pg-data:
+  pgadmin-data:
 
 secrets:
   pg-user:
@@ -65,6 +123,22 @@ secrets:
     file: ./pg-server/certs/server/server.crt
   pg-server.key:
     file: ./pg-server/certs/server/server.key
+  pgadmin-ca.crt:
+    file: ./pgadmin/certs/ca/server/server-ca.crt
+  pgadmin-server.crt:
+    file: ./pgadmin/certs/server/server.crt
+  pgadmin-server.key:
+    file: ./pgadmin/certs/server/server.key
+  pgadmin-fmerinocasallo_writer.crt:
+    file: ./pgadmin/certs/client/writer/fmerinocasallo_writer.crt
+  pgadmin-fmerinocasallo_writer.key:
+    file: ./pgadmin/certs/client/writer/fmerinocasallo_writer.key
+  pgadmin-fmerinocasallo_reader.crt:
+    file: ./pgadmin/certs/client/reader/fmerinocasallo_reader.crt
+  pgadmin-fmerinocasallo_reader.key:
+    file: ./pgadmin/certs/client/reader/fmerinocasallo_reader.key
+  pgadmin-passfile:
+    file: ./pgadmin/passwds/.pgpass
 
 networks:
   postgres_net:
