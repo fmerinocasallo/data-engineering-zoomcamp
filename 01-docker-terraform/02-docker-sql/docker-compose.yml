@@ -58,6 +58,8 @@ services:
     #     /pgadmin4/entrypoint.sh
     #   "
     configs:
+      # - source: pgadmin-entrypoint.sh
+      #   target: /pgadmin4/entrypoint.sh
       - source: pgadmin-servers.json
         target: /pgadmin4/servers.json
     environment:
@@ -147,6 +149,27 @@ services:
   #     pg-server:
   #       condition: service_healthy
 
+  data-ingest:
+    container_name: "data-ingest"
+    user: "fmerinocasallo:fmerinocasallo"
+    build:
+      context: ./data-ingest
+      dockerfile: data-ingest.Dockerfile
+    secrets:
+      - source: data-ingest-passwd
+        target: /home/fmerinocasallo/app/passwd/passwd.txt
+      - source: data-ingest-ca.crt
+        target: /home/fmerinocasallo/app/certs/server-ca.crt
+      - source: data-ingest-fmerinocasallo_writer.crt
+        target: /home/fmerinocasallo/app/certs/fmerinocasallo_writer.crt
+      - source: data-ingest-fmerinocasallo_writer.key
+        target: /home/fmerinocasallo/app/certs/fmerinocasallo_writer.key
+    networks:
+      postgres_net:
+        ipv4_address: ${DATA_INGEST_IP_ADDR:-172.19.0.3}
+    depends_on:
+      pg-server:
+        condition: service_healthy
 
 configs:
   pg-init_db.sql:
@@ -195,6 +218,14 @@ secrets:
     file: ./pgadmin/certs/client/reader/fmerinocasallo_reader.key
   pgadmin-passfile:
     file: ./pgadmin/passwds/.pgpass
+  data-ingest-passwd:
+    file: ./pg-server/passwds/pg-fmerinocasallo_writer-passwd.txt
+  data-ingest-ca.crt:
+    file: ./data-ingest/certs/ca/server/server-ca.crt
+  data-ingest-fmerinocasallo_writer.crt:
+    file: ./data-ingest/certs/client/writer/fmerinocasallo_writer.crt
+  data-ingest-fmerinocasallo_writer.key:
+    file: ./data-ingest/certs/client/writer/fmerinocasallo_writer.key
 
 networks:
   postgres_net:
