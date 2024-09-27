@@ -1,0 +1,40 @@
+{
+    "Servers": {
+        "1": {
+            "Name": "PostgreSQL Server [Read&Write]",
+            "Group": "Servers",
+            "Host": "172.19.0.70",
+            "HostAddr": "172.19.0.70",
+            "Port": 10864,
+            "Username": "fmerinocasallo_writer",
+            "Comment": "Read&Write user",
+            "MaintenanceDB": "de_zoomcamp",
+            "DBRestriction": "de_zoomcamp",
+            "ConnectionParameters": {
+            	"passfile": "/.pgpass",
+            	"sslmode": "verify-full",
+            	"sslcert": "/.postgresql/fmerinocasallo_writer.crt",
+            	"sslkey": "/.postgresql/fmerinocasallo_writer.key",
+            	"sslrootcert": "/.postgresql/server-ca.crt"
+	        }
+        },
+        "2": {
+            "Name": "PostgreSQL Server [Read-Only]",
+            "Group": "Servers",
+            "Host": "172.19.0.70",
+            "HostAddr": "172.19.0.70",
+            "Port": 10864,
+            "Username": "fmerinocasallo_reader",
+            "Comment": "Read-only user",
+            "MaintenanceDB": "de_zoomcamp",
+            "DBRestriction": "de_zoomcamp",
+	        "ConnectionParameters": {
+            	"passfile": "/.pgpass",
+            	"sslmode": "verify-full",
+            	"sslcert": "/.postgresql/fmerinocasallo_reader.crt",
+            	"sslkey": "/.postgresql/fmerinocasallo_reader.key",
+            	"sslrootcert": "/.postgresql/server-ca.crt"
+	        }
+        }
+    }
+}
