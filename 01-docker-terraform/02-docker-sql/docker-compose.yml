@@ -1,0 +1,75 @@
+name: de_zoomcamp
+services:
+  pg-server:
+    image: postgres:alpine
+    container_name: "pg-server"
+    user: "postgres:postgres"
+    restart: unless-stopped
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    configs:
+      - source: pg-init_db.sql
+        target: /docker-entrypoint-initdb.d/init-db.sql
+      - source: pg-entrypoint.sh
+        target: /docker-entrypoint-initdb.d/entrypoint.sh
+      - source: pg-pg_hba.conf
+        target: /etc/postgresql/pg_hba.conf
+      - source: pg-postgresql.conf
+        target: /etc/postgresql/postgresql.conf
+    environment:
+      POSTGRES_USER_FILE: /run/secrets/pg-user
+      POSTGRES_PASSWORD_FILE: /run/secrets/pg-password
+      POSTGRES_DB_FILE: /run/secrets/pg-db
+    secrets:
+      - pg-user
+      - pg-password
+      - pg-db
+      - pg-ca.crt
+      - pg-server.crt
+      - pg-server.key
+    volumes:
+      - type: volume
+        source: pg-data
+        target: /var/lib/postgresql/data
+    ports:
+      - mode: ingress
+        target: ${POSTGRES_PORT:-5432}
+        published: ${POSTGRES_PORT:-5432}
+        protocol: tcp
+    networks:
+      postgres_net:
+        ipv4_address: ${POSTGRES_IP_ADDR:-172.19.0.1}
+
+configs:
+  pg-init_db.sql:
+    file: ./pg-server/init/init-db.sql
+  pg-entrypoint.sh:
+    file: ./pg-server/init/entrypoint.sh
+  pg-pg_hba.conf:
+    file: ./pg-server/conf/pg_hba.conf
+  pg-postgresql.conf:
+    file: ./pg-server/conf/postgresql.conf
+
+volumes:
+  pg-data:
+
+secrets:
+  pg-user:
+    file: ./pg-server/conf/pg_user
+  pg-password:
+    file: ./pg-server/conf/pg_password
+  pg-db:
+    file: ./pg-server/conf/pg_db
+  pg-ca.crt:
+    file: ./pg-server/certs/ca/client/client-ca.crt
+  pg-server.crt:
+    file: ./pg-server/certs/server/server.crt
+  pg-server.key:
+    file: ./pg-server/certs/server/server.key
+
+networks:
+  postgres_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.19.0.0/24
+          gateway: 172.19.0.1
