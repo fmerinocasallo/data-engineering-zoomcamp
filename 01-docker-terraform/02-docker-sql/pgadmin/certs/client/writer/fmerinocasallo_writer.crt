@@ -1,0 +1,75 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number:
+            3e:5a:fe:10:68:6b:79:a8:fd:87:ab:a2:e0:ea:50:df:fe:9b:08
+        Signature Algorithm: sha256WithRSAEncryption
+        Issuer: CN=172.19.0.1
+        Validity
+            Not Before: Aug 22 09:17:27 2024 GMT
+            Not After : Aug 22 09:17:27 2025 GMT
+        Subject: CN=fmerinocasallo_writer
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                Public-Key: (2048 bit)
+                Modulus:
+                    00:a6:b2:6c:7d:c8:7a:04:ae:81:29:54:47:92:03:
+                    8a:90:56:6a:ef:6a:0e:ab:5c:13:87:63:05:8a:fe:
+                    6c:18:0b:fa:42:de:dd:60:c4:f1:31:15:10:40:13:
+                    99:f3:b2:c8:43:47:e0:72:85:d7:e4:2d:ea:a4:0d:
+                    b5:4c:ad:4e:b1:f5:12:0b:7d:62:a8:4c:7b:3f:38:
+                    b6:24:1c:4d:ed:ca:71:e0:13:ba:3b:c5:a9:8f:1d:
+                    96:94:d8:bb:c3:de:29:d8:2c:80:f4:d6:08:74:f2:
+                    2a:e7:b6:20:74:b7:5a:3c:a2:2e:83:8f:47:5d:0f:
+                    aa:db:b9:e4:01:5c:80:02:85:48:52:cb:11:78:86:
+                    fa:41:c9:16:d8:91:c3:53:f1:4c:bc:d1:df:98:16:
+                    64:fa:33:cd:8d:c9:5a:92:2f:28:26:88:42:8c:a7:
+                    84:ca:47:70:aa:87:fe:56:96:f1:27:6d:db:9c:1e:
+                    e2:86:92:a9:ff:e9:4c:ac:ae:6b:71:d7:e3:f6:40:
+                    fc:50:e4:b5:78:a8:a8:7d:c4:ca:c8:8f:63:e5:7d:
+                    58:a3:25:ca:61:b0:13:6a:f2:2c:fa:f4:54:6f:67:
+                    6c:8e:f0:34:76:66:c9:97:1f:29:19:eb:05:db:47:
+                    c5:b8:e6:a5:de:d1:8f:cd:52:65:92:e3:8d:71:71:
+                    7d:d3
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+            X509v3 Subject Key Identifier: 
+                93:87:E2:75:2B:46:22:E1:99:54:7A:C0:E3:2E:FA:BA:0C:F4:4A:B8
+            X509v3 Authority Key Identifier: 
+                A4:44:97:91:0A:AC:CF:EC:18:EA:D8:35:6F:14:35:5E:7E:D8:CB:09
+    Signature Algorithm: sha256WithRSAEncryption
+    Signature Value:
+        aa:ef:44:3f:6d:fd:d5:1c:8d:f6:47:36:a7:cb:34:1a:3a:c5:
+        78:b1:bf:08:ae:68:9a:61:11:15:79:86:f8:c8:6c:8e:ab:86:
+        18:83:64:82:29:51:5a:72:8b:fe:ed:f3:67:bb:62:1a:16:cd:
+        fa:b7:80:83:8f:b2:32:a9:29:b0:32:47:f4:9a:5b:42:cf:93:
+        3f:5b:73:5f:d6:a4:6b:53:95:6e:4d:75:cb:4f:f0:7b:88:08:
+        3f:7c:cf:63:06:aa:a3:43:6e:3a:3d:94:7e:fe:af:c3:b9:8f:
+        61:e0:1a:7c:e5:64:97:be:61:16:f8:6f:0c:95:0a:c2:88:98:
+        2d:8f:4b:da:65:b6:bc:30:03:60:09:52:19:f4:c0:84:2f:9b:
+        79:43:de:8f:1e:92:50:94:6f:3c:eb:71:10:4a:06:d7:0d:a7:
+        53:10:10:e4:47:01:1c:b5:48:5e:03:4b:69:98:9d:c9:e8:61:
+        ad:1d:2e:38:c8:91:7b:3a:bc:66:3e:f4:18:34:34:85:8a:f0:
+        98:80:e2:d0:90:b9:c0:de:9f:e5:3e:27:f4:9c:80:6b:90:b4:
+        42:f6:20:5d:00:5b:e6:c6:5c:d6:6d:55:4d:b1:1a:59:da:90:
+        6a:80:23:b3:22:ff:15:fc:b6:87:6e:65:d1:53:31:b5:7e:3f:
+        96:5d:dc:ee
+-----BEGIN CERTIFICATE-----
+MIIDBDCCAeygAwIBAgITPlr+EGhreaj9h6ui4OpQ3/6bCDANBgkqhkiG9w0BAQsF
+ADAVMRMwEQYDVQQDDAoxNzIuMTkuMC4xMB4XDTI0MDgyMjA5MTcyN1oXDTI1MDgy
+MjA5MTcyN1owIDEeMBwGA1UEAwwVZm1lcmlub2Nhc2FsbG9fd3JpdGVyMIIBIjAN
+BgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAprJsfch6BK6BKVRHkgOKkFZq72oO
+q1wTh2MFiv5sGAv6Qt7dYMTxMRUQQBOZ87LIQ0fgcoXX5C3qpA21TK1OsfUSC31i
+qEx7Pzi2JBxN7cpx4BO6O8Wpjx2WlNi7w94p2CyA9NYIdPIq57YgdLdaPKIug49H
+XQ+q27nkAVyAAoVIUssReIb6QckW2JHDU/FMvNHfmBZk+jPNjclaki8oJohCjKeE
+ykdwqof+VpbxJ23bnB7ihpKp/+lMrK5rcdfj9kD8UOS1eKiofcTKyI9j5X1YoyXK
+YbATavIs+vRUb2dsjvA0dmbJlx8pGesF20fFuOal3tGPzVJlkuONcXF90wIDAQAB
+o0IwQDAdBgNVHQ4EFgQUk4fidStGIuGZVHrA4y76ugz0SrgwHwYDVR0jBBgwFoAU
+pESXkQqsz+wY6tg1bxQ1Xn7YywkwDQYJKoZIhvcNAQELBQADggEBAKrvRD9t/dUc
+jfZHNqfLNBo6xXixvwiuaJphERV5hvjIbI6rhhiDZIIpUVpyi/7t82e7YhoWzfq3
+gIOPsjKpKbAyR/SaW0LPkz9bc1/WpGtTlW5NdctP8HuICD98z2MGqqNDbjo9lH7+
+r8O5j2HgGnzlZJe+YRb4bwyVCsKImC2PS9pltrwwA2AJUhn0wIQvm3lD3o8eklCU
+bzzrcRBKBtcNp1MQEORHARy1SF4DS2mYncnoYa0dLjjIkXs6vGY+9Bg0NIWK8JiA
+4tCQucDen+U+J/ScgGuQtEL2IF0AW+bGXNZtVU2xGlnakGqAI7Mi/xX8toduZdFT
+MbV+P5Zd3O4=
+-----END CERTIFICATE-----

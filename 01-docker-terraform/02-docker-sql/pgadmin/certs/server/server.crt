@@ -1,0 +1,74 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number:
+            10:1e:f7:1a:6e:52:8b:d6:b0:3a:40:0e:62:1d:06:cf:53:e7:65:10
+        Signature Algorithm: sha256WithRSAEncryption
+        Issuer: CN=172.19.0.1
+        Validity
+            Not Before: Aug 12 15:08:04 2024 GMT
+            Not After : Aug 12 15:08:04 2025 GMT
+        Subject: CN=172.19.0.50
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                Public-Key: (2048 bit)
+                Modulus:
+                    00:c2:2d:f3:c7:ea:2c:68:45:0b:83:c6:d6:59:2f:
+                    e8:af:00:88:49:a9:e0:da:b3:fa:2e:b8:9f:f1:f4:
+                    b6:0e:1a:e0:44:d5:b2:84:be:bb:50:2a:98:6d:b1:
+                    d7:a5:ac:79:74:e0:a8:ae:d5:94:99:04:55:31:ab:
+                    1e:0d:1d:40:f9:dd:ce:ae:f6:e0:5e:1d:94:51:cf:
+                    67:ef:2b:8c:92:76:fe:58:f2:59:43:da:8e:d7:30:
+                    de:1b:e9:c2:f8:fe:2c:10:64:90:31:24:93:c4:92:
+                    9a:8f:35:0c:17:50:a7:24:a1:2c:25:1e:7d:38:fb:
+                    09:05:25:5b:27:5e:61:69:49:ba:ff:53:79:cf:61:
+                    70:e9:f4:68:64:b2:ee:6d:89:d8:a9:5b:bb:24:d8:
+                    4d:d4:ef:30:b5:40:ec:14:87:0e:47:e6:ca:18:41:
+                    5b:d1:b1:4f:e7:74:b9:56:93:41:a7:15:02:c6:14:
+                    51:00:66:d3:7b:6a:13:ee:43:8b:ed:59:9b:6b:5a:
+                    97:ba:b8:8b:2d:db:1a:eb:d8:48:34:33:b9:aa:b9:
+                    71:f6:10:56:61:58:f4:6f:5e:6c:6c:91:d5:72:59:
+                    41:04:6e:7d:96:2c:d4:cf:e0:2a:3e:01:66:49:39:
+                    37:61:d0:ec:f7:3f:12:00:17:dd:82:37:4c:d6:59:
+                    42:45
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+            X509v3 Subject Key Identifier: 
+                4E:19:74:6D:26:3B:3B:62:03:9A:34:4F:FD:7B:B5:EB:54:73:F6:CA
+            X509v3 Authority Key Identifier: 
+                3F:AC:A7:81:29:EA:E8:13:9D:06:F0:CC:BC:5C:B9:CE:8D:13:2F:D2
+    Signature Algorithm: sha256WithRSAEncryption
+    Signature Value:
+        a2:76:12:41:de:7b:40:cb:39:99:2b:96:8d:6a:17:fa:59:ed:
+        79:ce:3d:a8:67:8c:9c:78:19:3a:ec:9d:cd:16:5f:8e:c4:03:
+        80:1d:d8:35:ce:5a:64:6b:b6:43:7b:53:48:83:81:85:21:b4:
+        01:55:a2:51:c9:37:7c:b9:08:1c:4b:16:6d:ec:84:c5:c4:e2:
+        29:08:a5:c2:30:02:ff:69:73:97:4a:9d:01:84:4a:4d:f8:5a:
+        b8:7d:3c:22:2d:16:96:9d:9d:30:2a:87:fb:4f:99:7b:43:cd:
+        2a:61:02:cd:c8:ea:85:91:ed:50:53:a7:69:f9:e7:99:9e:04:
+        7d:8d:10:3b:82:a3:fa:c1:62:e0:77:bd:a8:38:a1:ec:f4:ab:
+        0d:41:bd:5d:8b:37:9c:f7:5b:04:e4:f8:ee:01:8a:02:4c:45:
+        6a:51:27:60:9e:d0:55:ee:f0:7e:f4:22:c9:81:16:24:f7:49:
+        d2:b3:b6:36:fb:4b:a6:09:2f:08:39:68:e4:ea:cd:c8:40:5d:
+        47:3e:78:c5:f8:7a:79:64:23:46:04:2a:31:7f:63:b6:1d:fb:
+        03:44:b6:b2:6c:97:31:48:10:7c:37:45:83:fc:f8:a9:a9:b8:
+        44:c5:b2:27:87:53:9b:be:02:6f:7b:91:eb:cd:c8:05:6b:b4:
+        90:85:a1:19
+-----BEGIN CERTIFICATE-----
+MIIC+zCCAeOgAwIBAgIUEB73Gm5Si9awOkAOYh0Gz1PnZRAwDQYJKoZIhvcNAQEL
+BQAwFTETMBEGA1UEAwwKMTcyLjE5LjAuMTAeFw0yNDA4MTIxNTA4MDRaFw0yNTA4
+MTIxNTA4MDRaMBYxFDASBgNVBAMMCzE3Mi4xOS4wLjUwMIIBIjANBgkqhkiG9w0B
+AQEFAAOCAQ8AMIIBCgKCAQEAwi3zx+osaEULg8bWWS/orwCISang2rP6Lrif8fS2
+DhrgRNWyhL67UCqYbbHXpax5dOCortWUmQRVMaseDR1A+d3OrvbgXh2UUc9n7yuM
+knb+WPJZQ9qO1zDeG+nC+P4sEGSQMSSTxJKajzUMF1CnJKEsJR59OPsJBSVbJ15h
+aUm6/1N5z2Fw6fRoZLLubYnYqVu7JNhN1O8wtUDsFIcOR+bKGEFb0bFP53S5VpNB
+pxUCxhRRAGbTe2oT7kOL7Vmba1qXuriLLdsa69hINDO5qrlx9hBWYVj0b15sbJHV
+cllBBG59lizUz+AqPgFmSTk3YdDs9z8SABfdgjdM1llCRQIDAQABo0IwQDAdBgNV
+HQ4EFgQUThl0bSY7O2IDmjRP/Xu161Rz9sowHwYDVR0jBBgwFoAUP6yngSnq6BOd
+BvDMvFy5zo0TL9IwDQYJKoZIhvcNAQELBQADggEBAKJ2EkHee0DLOZkrlo1qF/pZ
+7XnOPahnjJx4GTrsnc0WX47EA4Ad2DXOWmRrtkN7U0iDgYUhtAFVolHJN3y5CBxL
+Fm3shMXE4ikIpcIwAv9pc5dKnQGESk34Wrh9PCItFpadnTAqh/tPmXtDzSphAs3I
+6oWR7VBTp2n555meBH2NEDuCo/rBYuB3vag4oez0qw1BvV2LN5z3WwTk+O4BigJM
+RWpRJ2Ce0FXu8H70IsmBFiT3SdKztjb7S6YJLwg5aOTqzchAXUc+eMX4enlkI0YE
+KjF/Y7Yd+wNEtrJslzFIEHw3RYP8+KmpuETFsieHU5u+Am97kevNyAVrtJCFoRk=
+-----END CERTIFICATE-----

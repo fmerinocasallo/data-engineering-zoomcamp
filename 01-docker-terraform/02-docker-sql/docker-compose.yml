@@ -1,0 +1,236 @@
+name: de_zoomcamp
+services:
+  pg-server:
+    image: postgres:alpine
+    container_name: "pg-server"
+    user: "postgres:postgres"
+    restart: unless-stopped
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    configs:
+      - source: pg-init_db.sql
+        target: /docker-entrypoint-initdb.d/init-db.sql
+      - source: pg-entrypoint.sh
+        target: /docker-entrypoint-initdb.d/entrypoint.sh
+      - source: pg-pg_hba.conf
+        target: /etc/postgresql/pg_hba.conf
+      - source: pg-postgresql.conf
+        target: /etc/postgresql/postgresql.conf
+    environment:
+      POSTGRES_USER_FILE: /run/secrets/pg-user
+      POSTGRES_PASSWORD_FILE: /run/secrets/pg-password
+      POSTGRES_DB_FILE: /run/secrets/pg-db
+    secrets:
+      - pg-user
+      - pg-password
+      - pg-db
+      - pg-ca.crt
+      - pg-server.crt
+      - pg-server.key
+    volumes:
+      - type: volume
+        source: pg-data
+        target: /var/lib/postgresql/data
+    ports:
+      - mode: ingress
+        target: ${POSTGRES_PORT:-5432}
+        published: ${POSTGRES_PORT:-5432}
+        protocol: tcp
+    networks:
+      postgres_net:
+        ipv4_address: ${POSTGRES_IP_ADDR:-172.19.0.1}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -p ${POSTGRES_PORT}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  pgadmin:
+    container_name: "pgadmin"
+    user: "pgadmin:root"
+    restart: unless-stopped
+    build:
+      context: ./pgadmin
+      dockerfile: pgadmin-2.Dockerfile
+      args:
+        - PGADMIN_USER_CONFIG_DIR=$PGADMIN_USER_CONFIG_DIR
+    # entrypoint: >
+    #   /bin/sh -c "
+    #     /pgadmin4/entrypoint.sh
+    #   "
+    configs:
+      # - source: pgadmin-entrypoint.sh
+      #   target: /pgadmin4/entrypoint.sh
+      - source: pgadmin-servers.json
+        target: /pgadmin4/servers.json
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL:-user@pgadmin.com}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD:-user_password}
+      - PGADMIN_USER_CONFIG_DIR=${PGADMIN_USER_CONFIG_DIR:-user_pgadmin.com}
+      - PGADMIN_LISTEN_PORT=${PGADMIN_LISTEN_PORT:-80}
+      - PGADMIN_SERVER_JSON_FILE=${PGADMIN_SERVER_JSON_FILE}
+      - PGADMIN_ENABLE_TLS=${PGADMIN_ENABLE_TLS:-}
+    secrets:
+      - source: pgadmin-server.crt
+        target: /certs/server.cert
+      - source: pgadmin-server.key
+        target: /certs/server.key
+      - source: pgadmin-ca.crt
+        target: /var/lib/pgadmin/storage/${PGADMIN_USER_CONFIG_DIR}/.postgresql/server-ca.crt
+      - source: pgadmin-fmerinocasallo_writer.crt
+        target: /var/lib/pgadmin/storage/${PGADMIN_USER_CONFIG_DIR}/.postgresql/fmerinocasallo_writer.crt
+      - source: pgadmin-fmerinocasallo_writer.key
+        target: /var/lib/pgadmin/storage/${PGADMIN_USER_CONFIG_DIR}/.postgresql/fmerinocasallo_writer.key
+      - source: pgadmin-fmerinocasallo_reader.crt
+        target: /var/lib/pgadmin/storage/${PGADMIN_USER_CONFIG_DIR}/.postgresql/fmerinocasallo_reader.crt
+      - source: pgadmin-fmerinocasallo_reader.key
+        target: /var/lib/pgadmin/storage/${PGADMIN_USER_CONFIG_DIR}/.postgresql/fmerinocasallo_reader.key
+      - source: pgadmin-passfile
+        target: /var/lib/pgadmin/storage/${PGADMIN_USER_CONFIG_DIR}/.pgpass
+    volumes:
+      - type: volume
+        source: pgadmin-data
+        target: /var/lib/pgadmin
+    ports:
+      - mode: ingress
+        target: ${PGADMIN_LISTEN_PORT:-80}
+        published: ${PGADMIN_LISTEN_PORT:-80}
+        protocol: tcp
+    networks:
+      postgres_net:
+        ipv4_address: ${PGADMIN_IP_ADDR:-172.19.0.2}
+    depends_on:
+      pg-server:
+        condition: service_healthy
+
+  # pgadmin:
+  #   container_name: "pgadmin"
+  #   restart: unless-stopped
+  #   build:
+  #     context: ./pgadmin
+  #     dockerfile: Dockerfile
+  #   entrypoint: >
+  #     /bin/sh -c "
+  #       /pgadmin4/entrypoint.sh
+  #     "
+  #   configs:
+  #     - source: pgadmin-entrypoint.sh
+  #       target: /pgadmin4/entrypoint.sh
+  #     - source: pgadmin-servers.json
+  #       target: /pgadmin4/servers.json
+  #   environment:
+  #     - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL:-user@pgadmin.com}
+  #     - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD:-user_password}
+  #     - PGADMIN_USER_CONFIG_DIR=${PGADMIN_USER_CONFIG_DIR:-user_pgadmin.com}
+  #     - PGADMIN_LISTEN_PORT=${PGADMIN_LISTEN_PORT:-80}
+  #     - PGADMIN_SERVER_JSON_FILE=${PGADMIN_SERVER_JSON_FILE}
+  #     - PGADMIN_ENABLE_TLS=${PGADMIN_ENABLE_TLS:-}
+  #   secrets:
+  #     - pgadmin-ca.crt
+  #     - pgadmin-server.crt
+  #     - pgadmin-server.key
+  #     - pgadmin-fmerinocasallo_writer.crt
+  #     - pgadmin-fmerinocasallo_writer.key
+  #     - pgadmin-fmerinocasallo_reader.crt
+  #     - pgadmin-fmerinocasallo_reader.key
+  #     - pgadmin-passfile
+  #   volumes:
+  #     - type: volume
+  #       source: pgadmin-data
+  #       target: /var/lib/pgadmin
+  #   ports:
+  #     - mode: ingress
+  #       target: ${PGADMIN_LISTEN_PORT:-80}
+  #       published: ${PGADMIN_LISTEN_PORT:-80}
+  #       protocol: tcp
+  #   networks:
+  #     postgres_net:
+  #       ipv4_address: ${PGADMIN_IP_ADDR:-172.19.0.2}
+  #   depends_on:
+  #     pg-server:
+  #       condition: service_healthy
+
+  data-ingest:
+    container_name: "data-ingest"
+    user: "fmerinocasallo:fmerinocasallo"
+    build:
+      context: ./data-ingest
+      dockerfile: data-ingest.Dockerfile
+    secrets:
+      - source: data-ingest-passwd
+        target: /home/fmerinocasallo/app/passwd/passwd.txt
+      - source: data-ingest-ca.crt
+        target: /home/fmerinocasallo/app/certs/server-ca.crt
+      - source: data-ingest-fmerinocasallo_writer.crt
+        target: /home/fmerinocasallo/app/certs/fmerinocasallo_writer.crt
+      - source: data-ingest-fmerinocasallo_writer.key
+        target: /home/fmerinocasallo/app/certs/fmerinocasallo_writer.key
+    networks:
+      postgres_net:
+        ipv4_address: ${DATA_INGEST_IP_ADDR:-172.19.0.3}
+    depends_on:
+      pg-server:
+        condition: service_healthy
+
+configs:
+  pg-init_db.sql:
+    file: ./pg-server/init/init-db.sql
+  pg-entrypoint.sh:
+    file: ./pg-server/init/entrypoint.sh
+  pg-pg_hba.conf:
+    file: ./pg-server/conf/pg_hba.conf
+  pg-postgresql.conf:
+    file: ./pg-server/conf/postgresql.conf
+  # pgadmin-entrypoint.sh:
+  #   file: ./pgadmin/init/entrypoint.sh
+  pgadmin-servers.json:
+    file: ./pgadmin/conf/servers.json
+
+volumes:
+  pg-data:
+  pgadmin-data:
+
+secrets:
+  pg-user:
+    file: ./pg-server/conf/pg_user
+  pg-password:
+    file: ./pg-server/conf/pg_password
+  pg-db:
+    file: ./pg-server/conf/pg_db
+  pg-ca.crt:
+    file: ./pg-server/certs/ca/client/client-ca.crt
+  pg-server.crt:
+    file: ./pg-server/certs/server/server.crt
+  pg-server.key:
+    file: ./pg-server/certs/server/server.key
+  pgadmin-ca.crt:
+    file: ./pgadmin/certs/ca/server/server-ca.crt
+  pgadmin-server.crt:
+    file: ./pgadmin/certs/server/server.crt
+  pgadmin-server.key:
+    file: ./pgadmin/certs/server/server.key
+  pgadmin-fmerinocasallo_writer.crt:
+    file: ./pgadmin/certs/client/writer/fmerinocasallo_writer.crt
+  pgadmin-fmerinocasallo_writer.key:
+    file: ./pgadmin/certs/client/writer/fmerinocasallo_writer.key
+  pgadmin-fmerinocasallo_reader.crt:
+    file: ./pgadmin/certs/client/reader/fmerinocasallo_reader.crt
+  pgadmin-fmerinocasallo_reader.key:
+    file: ./pgadmin/certs/client/reader/fmerinocasallo_reader.key
+  pgadmin-passfile:
+    file: ./pgadmin/passwds/.pgpass
+  data-ingest-passwd:
+    file: ./pg-server/passwds/pg-fmerinocasallo_writer-passwd.txt
+  data-ingest-ca.crt:
+    file: ./data-ingest/certs/ca/server/server-ca.crt
+  data-ingest-fmerinocasallo_writer.crt:
+    file: ./data-ingest/certs/client/writer/fmerinocasallo_writer.crt
+  data-ingest-fmerinocasallo_writer.key:
+    file: ./data-ingest/certs/client/writer/fmerinocasallo_writer.key
+
+networks:
+  postgres_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.19.0.0/24
+          gateway: 172.19.0.1
