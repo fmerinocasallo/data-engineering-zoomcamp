@@ -1,0 +1,5 @@
+outs:
+- md5: c81dacf860fd183371e08ee8f20869f6
+  size: 34208953
+  hash: md5
+  path: yellow_tripdata_2021-01_prepared.parquet

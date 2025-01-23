@@ -1,0 +1,5 @@
+outs:
+- md5: c8bed5793f974266d615fd98f8ca30dd
+  size: 124043
+  hash: md5
+  path: data_dictionary_trip_records_yellow.pdf

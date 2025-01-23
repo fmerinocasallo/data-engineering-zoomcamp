@@ -1,0 +1,5 @@
+outs:
+- md5: c6064b7c144c716450641f769659d178
+  size: 12331
+  hash: md5
+  path: taxi_zone_lookup.csv
