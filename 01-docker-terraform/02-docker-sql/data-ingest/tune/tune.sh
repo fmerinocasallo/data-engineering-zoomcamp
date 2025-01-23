@@ -7,11 +7,11 @@ do
         for method ("multi" "psql_insert_copy" "None")
         do
             echo "chunk_size_dw=${chunk_size_dw} - chunk_size_sql=${chunk_size_sql} - method=${method}"
-            tex_mem python data-nyc-taxi/data-manager.py \
+            tex_mem python ../data-manager.py \
                 --url=https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2021-01.parquet \
-                --fname=yellow_tripdata_2021-01.parquet \
+                --fname=../data/yellow_tripdata_2021-01.parquet \
                 --username=fmerinocasallo_writer \
-                --password=pg-server/passwds/pg-fmerinocasallo_writer-passwd.txt \
+                --password=../../pg-server/passwds/pg-fmerinocasallo_writer-passwd.txt \
                 --host=172.19.0.70 \
                 --port=10864 \
                 --db=de_zoomcamp \
