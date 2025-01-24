@@ -118,6 +118,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+pip install --upgrade pip
 pip install --user -r requirements.txt
 
 ready=1
