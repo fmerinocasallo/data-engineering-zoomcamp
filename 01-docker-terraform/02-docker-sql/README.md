@@ -318,7 +318,7 @@ By using the `target` feature of `Docker secrets`, we could use an alternative d
 This time, we just need to create the `/var/lib/pgadmin/storage/${PGADMIN_USER_CONFIG_DIR}/.postgresql` in advance so that this branch of the file system is owned by `pgadmin:root` instead of the default owner (`root:root`).
 Otherwise, the `pgAdmin` service would complain about not being able to read and write in `/var/lib/pgadmin/storage/` during startup.
 
-:raised_hand::speech_balloon: Please, let me know if you know how to enable SSL/TLS encryption in `pgAdmin` using the official `Docker image` (`dpage/pgadmin4`).
+:raising_hand_man: Please, let me know if you know how to enable SSL/TLS encryption in `pgAdmin` using the official `Docker image` (`dpage/pgadmin4`).
 
 #### :page_facing_up: FILE `./pgadmin/pgadmin-2.Dockerfile` (custom `Docker image`):
 ```
