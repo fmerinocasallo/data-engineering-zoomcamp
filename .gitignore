@@ -201,3 +201,9 @@ override.tf.json
 # Ignore CLI configuration files
 .terraformrc
 terraform.rc
+
+# Ignore GCP keys
+gcp*creds.json
+
+# Ignore VSCode settings
+.vscode/settings.json
