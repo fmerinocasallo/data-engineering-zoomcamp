@@ -25,10 +25,10 @@ ownership=(
 )
 
 for file in "${ignored[@]}"; do
-  git update-index --no-skip-worktree -- "${file}"
   echo "git update-index --no-skip-worktree -- \"${file}\""
-  sudo chown `id -u`:`id -g` "${file}"
+  git update-index --no-skip-worktree -- "${file}"
   echo "sudo chown `id -u`:`id -g` \"${file}\""
+  sudo chown `id -u`:`id -g` "${file}"
 done
 
 echo -e "Stashing changes..."
@@ -38,8 +38,8 @@ git checkout -m $@
 git stash pop
 
 for idx in "${!ignored[@]}"; do
-  git update-index --skip-worktree -- "${ignored[${idx}]}}"
   echo "git update-index --skip-worktree -- \"${ignored[${idx}]}\""
-  sudo chown {ownership[${idx}]} "${ignored[${idx}]}"
+  git update-index --skip-worktree -- "${ignored[${idx}]}"
   echo "sudo chown ${ownership[${idx}]} \"${ignored[${idx}]}\""
+  sudo chown {ownership[${idx}]} "${ignored[${idx}]}"
 done
