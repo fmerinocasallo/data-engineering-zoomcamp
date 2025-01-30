@@ -11,27 +11,27 @@ set -euo pipefail
 unset mode
 
 ignored=(
-  "01-docker-terraform/01-docker-sql/pg-server/certs/server/server.key"
-  "01-docker-terraform/01-docker-sql/pgadmin/certs/client/reader/fmerinocasallo_reader.key"
-  "01-docker-terraform/01-docker-sql/pgadmin/certs/client/superuser/postgres.key"
-  "01-docker-terraform/01-docker-sql/pgadmin/certs/client/writer/fmerinocasallo_writer.key"
-  "01-docker-terraform/01-docker-sql/pgadmin/certs/server/server.key"
-  "01-docker-terraform/01-docker-sql/pgadmin/passwds/.pgpass"
+    "01-docker-terraform/01-docker-sql/pg-server/certs/server/server.key"
+    "01-docker-terraform/01-docker-sql/pgadmin/certs/client/reader/fmerinocasallo_reader.key"
+    "01-docker-terraform/01-docker-sql/pgadmin/certs/client/superuser/postgres.key"
+    "01-docker-terraform/01-docker-sql/pgadmin/certs/client/writer/fmerinocasallo_writer.key"
+    "01-docker-terraform/01-docker-sql/pgadmin/certs/server/server.key"
+    "01-docker-terraform/01-docker-sql/pgadmin/passwds/.pgpass"
 )
 
 ownership=(
-  "70:70"
-  "5050:root"
-  "5050:root"
-  "5050:root"
-  "5050:root"
-  "5050:root"
+    "70:70"
+    "5050:root"
+    "5050:root"
+    "5050:root"
+    "5050:root"
+    "5050:root"
 )
 
 usage(){
 >&2 cat << EOF
 Usage: $0
-   [ --mode pre|post ]
+    [ --mode pre|post ]
 EOF
 exit 1
 }
@@ -46,26 +46,26 @@ fi
 
 eval set -- ${args}
 while [[ $# -gt 0 ]]; do
-  case $1 in
-    '-h' | '--help')
-        usage
-        shift
-        continue
-    ;;
-    '--mode')
-        mode=$2
-        shift 2
-        continue
-    ;;
-    '--')
-        shift
-        break
-    ;;
-    *)
-        >&2 echo "Unsupported option: $1"
-        usage
-    ;;
-  esac
+    case $1 in
+        '-h' | '--help')
+            usage
+            shift
+            continue
+        ;;
+        '--mode')
+            mode=$2
+            shift 2
+            continue
+        ;;
+        '--')
+            shift
+            break
+        ;;
+        *)
+            >&2 echo "Unsupported option: $1"
+            usage
+        ;;
+    esac
 done
 
 ready=1
