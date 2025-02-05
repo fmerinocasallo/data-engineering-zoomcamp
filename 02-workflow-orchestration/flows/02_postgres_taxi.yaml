@@ -15,6 +15,8 @@ inputs:
     displayName: Select year
     values: ["2019", "2020"]
     defaults: "2019"
+    allowCustomValue: true # allows you to type 2021 from the UI for the homework 🤗
+
 
   - id: month
     type: SELECT
@@ -257,14 +259,10 @@ tasks:
               S.trip_distance, S.fare_amount, S.extra, S.mta_tax, S.tip_amount, S.tolls_amount, S.ehail_fee,
               S.improvement_surcharge, S.total_amount, S.payment_type, S.trip_type, S.congestion_surcharge
             );
-  
-  - id: purge_files
-    type: io.kestra.plugin.core.storage.PurgeCurrentExecutionFiles
-    description: This will remove output files. If you'd like to explore Kestra outputs, disable it.
 
 pluginDefaults:
   - type: io.kestra.plugin.jdbc.postgresql
     values:
-      url: jdbc:postgresql://host.docker.internal:5432/postgres-zoomcamp
+      url: jdbc:postgresql://pg-server:5432/kestra
       username: kestra
       password: k3str4
