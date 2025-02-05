@@ -1,24 +1,58 @@
-volumes:
-  postgres-data:
-    driver: local
-  kestra-data:
-    driver: local
+name: de-zoomcamp-module-2
 
 services:
-  postgres:
-    image: postgres
+  pg-server:
+    image: postgres:alpine
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - pg-server-data:/var/lib/postgresql/data
     environment:
       POSTGRES_DB: kestra
       POSTGRES_USER: kestra
       POSTGRES_PASSWORD: k3str4
+    networks:
+      postgres_net:
+        ipv4_address: 172.19.0.70
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
       interval: 30s
       timeout: 10s
       retries: 10
 
+  pgadmin:
+      user: "pgadmin:root"
+      restart: unless-stopped
+      build:
+        context: ./pgadmin
+        dockerfile: pgadmin.Dockerfile
+        args:
+          - PGADMIN_USER_CONFIG_DIR=user_pgadmin.com
+      configs:
+        - source: pgadmin-servers.json
+          target: /pgadmin4/servers.json
+      secrets:
+        - source: pgadmin-passfile
+          target: /var/lib/pgadmin/storage/${PGADMIN_USER_CONFIG_DIR}/.pgpass
+      environment:
+        - PGADMIN_DEFAULT_EMAIL=user@pgadmin.com
+        - PGADMIN_DEFAULT_PASSWORD=pg4dm1n
+        - PGADMIN_USER_CONFIG_DIR=user_pgadmin.com
+        - PGADMIN_LISTEN_PORT=9090
+        - PGADMIN_SERVER_JSON_FILE=/pgadmin4/servers.json
+      volumes:
+        - type: volume
+          source: pgadmin-data
+          target: /var/lib/pgadmin
+      ports:
+        - mode: ingress
+          target: 9090
+          published: 9090
+          protocol: tcp
+      networks:
+        postgres_net:
+          ipv4_address: 172.19.0.50
+      depends_on:
+        pg-server:
+          condition: service_healthy
   kestra:
     image: kestra/kestra:latest
     pull_policy: always
@@ -32,7 +66,7 @@ services:
       KESTRA_CONFIGURATION: |
         datasources:
           postgres:
-            url: jdbc:postgresql://postgres:5432/kestra
+            url: jdbc:postgresql://pg-server:5432/kestra
             driverClassName: org.postgresql.Driver
             username: kestra
             password: k3str4
@@ -57,6 +91,33 @@ services:
     ports:
       - "8080:8080"
       - "8081:8081"
+    networks:
+      postgres_net:
+        ipv4_address: 172.19.0.80
     depends_on:
-      postgres:
+      pg-server:
         condition: service_started
+
+configs:
+  pgadmin-servers.json:
+    file: ./pgadmin/conf/servers.json
+
+volumes:
+  pg-server-data:
+    driver: local
+  pgadmin-data:
+    driver: local
+  kestra-data:
+    driver: local
+
+secrets:
+  pgadmin-passfile:
+    file: ./pgadmin/passwds/.pgpass
+
+networks:
+  postgres_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.19.0.0/24
+          gateway: 172.19.0.1

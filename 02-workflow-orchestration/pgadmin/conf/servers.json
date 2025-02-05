@@ -1,0 +1,18 @@
+{
+    "Servers": {
+        "1": {
+            "Name": "PostgreSQL Server [Read&Write]",
+            "Group": "Servers",
+            "Host": "172.19.0.70",
+            "HostAddr": "172.19.0.70",
+            "Port": 5432,
+            "Username": "kestra",
+            "Comment": "Superuser",
+            "MaintenanceDB": "kestra",
+            "DBRestriction": "kestra",
+            "ConnectionParameters": {
+                "passfile": "/.pgpass"
+            }
+        }
+    }
+}
