@@ -1,0 +1,43 @@
+id: 02_update_taxi_years_months_kv
+namespace: zoomcamp
+description: |
+  Weekly check (Madrid timezone at midnight) to verify which monthly datasets
+  are available in the remote repository for yellow and green taxis and update the KV store.
+
+concurrency:
+  limit: 1
+
+triggers:
+  - id: schedule
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "0 0 * * 1"  # every Monday at midnight
+    timezone: "Europe/Madrid"
+
+tasks:
+  - id: check_datasets
+    type: io.kestra.plugin.scripts.python.Commands
+    namespaceFiles:
+      enabled: true
+      include:
+        - scripts/check_datasets.py
+    commands:
+      - python scripts/check_datasets.py
+    logLevel: INFO
+
+  - id: update_kv_taxis
+    type: io.kestra.plugin.core.kv.Set
+    key: taxis
+    kvType: JSON
+    value: "{{ outputs.check_datasets.vars.taxis }}"
+
+  - id: update_kv_years
+    type: io.kestra.plugin.core.kv.Set
+    key: years
+    kvType: JSON
+    value: "{{ outputs.check_datasets.vars.years }}"
+
+  - id: update_kv_months
+    type: io.kestra.plugin.core.kv.Set
+    key: months
+    kvType: JSON
+    value: "{{ outputs.check_datasets.vars.months }}"
