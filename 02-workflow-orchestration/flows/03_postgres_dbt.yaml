@@ -39,7 +39,7 @@ tasks:
         outputs:
           dev:
             type: postgres
-            host: host.docker.internal
+            host: pg-server
             user: kestra
             password: k3str4
             port: 5432
