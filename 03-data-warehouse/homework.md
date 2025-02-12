@@ -4,7 +4,7 @@ ATTENTION: At the end of the submission form, you will be required to include a 
 This repository should contain your code for solving the homework. If your solution includes code that is not in file format (such as SQL queries or 
 shell commands), please include these directly in the README file of your repository.
 
-<b><u>Important Note:</b></u> <p> For this homework we will be using the Yellow Taxi Trip Records for **January 2024 - June 2024 NOT the entire year of data** Parquet Files from the New York City Taxi Data found [here](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
+**IMPORTANT NOTE**: For this homework we will be using the Yellow Taxi Trip Records for **January 2024 - June 2024 NOT the entire year of data** Parquet Files from the New York City Taxi Data found [here](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
 
 If you are using orchestration such as Kestra, Mage, Airflow or Prefect etc. do not load the data into Big Query using the orchestrator.</br> 
 Stop with loading the files into a bucket.
@@ -21,15 +21,18 @@ Nothing is fool proof so make sure that all 6 files show in your GCS Bucket befo
 
 ```
 -- Create an external table referring to the Yellow Taxi Trip Records from GCS Bucket
-CREATE OR REPLACE EXTERNAL TABLE `de_zoomcamp_2025_kestra_dataset.yellow_tripdata_external`
+CREATE OR REPLACE EXTERNAL TABLE `<GCP_DATASET>.yellow_tripdata_external`
 OPTIONS (
   format = 'PARQUET',
-  uris = ['gs://de-zoomcamp-2025-kestra-bucket/yellow_tripdata_2024-*.parquet']
+  uris = ['gs://<GCP_BUCKET>/yellow_tripdata_2024-*.parquet']
 );
 
+-- Check external table with the Yellow Taxi Trip Records from GCS Bucket
+SELECT * FROM `<GCP_DATASET>.yellow_tripdata_external` LIMIT 10;
+
 -- Create a non-partitioned table using the Yellow Taxi Trip Records from the External Table
-CREATE OR REPLACE TABLE `de_zoomcamp_2025_kestra_dataset.yellow_tripdata_non_partitioned` AS
-SELECT * FROM `de_zoomcamp_2025_kestra_dataset.yellow_tripdata_external`;
+CREATE OR REPLACE TABLE `<GCP_DATASET>.yellow_tripdata_non_partitioned` AS
+SELECT * FROM `<GCP_DATASET>.yellow_tripdata_external`;
 ```
 
 ## Question 1:
@@ -39,9 +42,13 @@ Question 1: What is count of records for the 2024 Yellow Taxi Data?
 - 20,332,093
 - 85,431,289
 
+#### Answer:
+
+- 20,332,093
 
 ## Question 2:
-Write a query to count the distinct number of PULocationIDs for the entire dataset on both the tables.</br> 
+Write a query to count the distinct number of PULocationIDs for the entire dataset on both the tables.
+
 What is the **estimated amount** of data that will be read when this query is executed on the External Table and the Table?
 
 - 18.82 MB for the External Table and 47.60 MB for the Materialized Table
@@ -49,18 +56,40 @@ What is the **estimated amount** of data that will be read when this query is ex
 - 2.14 GB for the External Table and 0MB for the Materialized Table
 - 0 MB for the External Table and 0MB for the Materialized Table
 
+#### Answer:
+
+- 0 MB for the External Table and 155.12 MB for the Materialized Table
+
+```
+-- Count distinct PULocationIDs from external table
+SELECT COUNT(DISTINCT PULocationID) as distinct_locations 
+FROM `<GCP_DATASET>.yellow_tripdata_external`;
+
+-- Count distinct PULocationIDs from materialized table
+SELECT COUNT(DISTINCT PULocationID) as distinct_locations
+FROM `<GCP_DATASET>.yellow_tripdata_non_partitioned`;
+```
+
 ## Question 3:
 Write a query to retrieve the PULocationID from the table (not the external table) in BigQuery. Now write a query to retrieve the PULocationID and DOLocationID on the same table. Why are the estimated number of Bytes different?
-- BigQuery is a columnar database, and it only scans the specific columns requested in the query. Querying two columns (PULocationID, DOLocationID) requires 
-reading more data than querying one column (PULocationID), leading to a higher estimated number of bytes processed.
-- BigQuery duplicates data across multiple storage partitions, so selecting two columns instead of one requires scanning the table twice, 
-doubling the estimated bytes processed.
+- BigQuery is a columnar database, and it only scans the specific columns requested in the query. Querying two columns (PULocationID, DOLocationID) requires reading more data than querying one column (PULocationID), leading to a higher estimated number of bytes processed.
+- BigQuery duplicates data across multiple storage partitions, so selecting two columns instead of one requires scanning the table twice, doubling the estimated bytes processed.
 - BigQuery automatically caches the first queried column, so adding a second column increases processing time but does not affect the estimated bytes scanned.
 - When selecting multiple columns, BigQuery performs an implicit join operation between them, increasing the estimated bytes processed
 
-
 #### Answer:
 
+- BigQuery is a columnar database, and it only scans the specific columns requested in the query. Querying two columns (PULocationID, DOLocationID) requires reading more data than querying one column (PULocationID), leading to a higher estimated number of bytes processed.
+
+```
+-- Query for PULocationID only
+SELECT PULocationID 
+FROM `<GCP_DATASET>.yellow_tripdata_non_partitioned`;
+
+-- Query for both PULocationID and DOLocationID
+SELECT PULocationID, DOLocationID
+FROM `<GCP_DATASET>.yellow_tripdata_non_partitioned`;
+```
 
 ## Question 4:
 How many records have a fare_amount of 0?
@@ -72,7 +101,14 @@ How many records have a fare_amount of 0?
 
 #### Answer:
 
+- 8,333
 
+```
+-- Query to count records with fare_amount of 0
+SELECT COUNT(*) as zero_fare_count
+FROM `<GCP_DATASET>.yellow_tripdata_non_partitioned`
+WHERE fare_amount = 0;
+```
 
 ## Question 5:
 What is the best strategy to make an optimized table in Big Query if your query will always filter based on tpep_dropoff_datetime and order the results by VendorID (Create a new table with this strategy)
@@ -90,34 +126,32 @@ To create a new table with this strategy, you would first partition the table by
 
 ```
 -- Create a partitioned table
-CREATE OR REPLACE TABLE `your_project_id.your_dataset_id.your_table_id`
-PARTITION BY date_column
+CREATE OR REPLACE TABLE `<GCP_DATASET>.yellow_tripdata_partitioned`
+PARTITION BY DATE(tpep_dropoff_datetime)
 AS
 SELECT
   *
 FROM
-  `your_project_id.your_dataset_id.source_table`;
+  `<GCP_DATASET>.yellow_tripdata_external`;
 
 -- Create a clustered table
-CREATE OR REPLACE TABLE `your_project_id.your_dataset_id.your_table_id`
-CLUSTER BY product_id
+CREATE OR REPLACE TABLE `<GCP_DATASET>.yellow_tripdata_partitioned_clustered`
+PARTITION BY DATE(tpep_dropoff_datetime)
+CLUSTER BY VendorID
 AS
 SELECT
   *
 FROM
-  `your_project_id.your_dataset_id.source_table`;
+  `<GCP_DATASET>.yellow_tripdata_partitioned`;
 ```
-
-
-
 
 ## Question 6:
 Write a query to retrieve the distinct VendorIDs between tpep_dropoff_datetime
-2024-03-01 and 2024-03-15 (inclusive)</br>
+2024-03-01 and 2024-03-15 (inclusive)
 
-Use the materialized table you created earlier in your from clause and note the estimated bytes. Now change the table in the from clause to the partitioned table you created for question 5 and note the estimated bytes processed. What are these values? </br>
+Use the materialized table you created earlier in your from clause and note the estimated bytes. Now change the table in the from clause to the partitioned table you created for question 5 and note the estimated bytes processed. What are these values?
 
-Choose the answer which most closely matches.</br> 
+Choose the answer which most closely matches.
 
 - 12.47 MB for non-partitioned table and 326.42 MB for the partitioned table
 - 310.24 MB for non-partitioned table and 26.84 MB for the partitioned table
@@ -127,8 +161,19 @@ Choose the answer which most closely matches.</br>
 
 #### Answer:
 
+- 310.24 MB for non-partitioned table and 26.84 MB for the partitioned table
 
+```
+-- Query for non-partitioned table
+SELECT COUNT(DISTINCT VendorID) as distinct_vendors
+FROM `<GCP_DATASET>.yellow_tripdata_non_partitioned`
+WHERE DATE(tpep_dropoff_datetime) BETWEEN '2024-03-01' AND '2024-03-15';
 
+-- Query for partitioned table
+SELECT COUNT(DISTINCT VendorID) as distinct_vendors
+FROM `<GCP_DATASET>.yellow_tripdata_partitioned`
+WHERE DATE(tpep_dropoff_datetime) BETWEEN '2024-03-01' AND '2024-03-15';
+```
 
 ## Question 7: 
 Where is the data stored in the External Table you created?
@@ -164,9 +209,13 @@ No Points: Write a `SELECT count(*)` query FROM the materialized table you creat
 
 #### Answer:
 
+There is no need to read any bytes from the materialized table because the query will return the number of rows in the table directly.
 
-
-
+```
+-- Query to count records from materialized table
+SELECT COUNT(*) as total_records
+FROM `<GCP_DATASET>.yellow_tripdata_non_partitioned`;
+```
 
 ## Submitting the solutions
 
