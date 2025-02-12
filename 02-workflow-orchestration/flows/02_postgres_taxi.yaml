@@ -7,22 +7,27 @@ inputs:
   - id: taxi
     type: SELECT
     displayName: Select taxi type
-    values: [yellow, green]
+    expression: "{{ kv('taxis') }}"
     defaults: yellow
 
   - id: year
     type: SELECT
     displayName: Select year
-    values: ["2019", "2020"]
+    expression: "{{ kv('years')[inputs.taxi] }}"
     defaults: "2019"
-    allowCustomValue: true # allows you to type 2021 from the UI for the homework 🤗
-
+    dependsOn:
+      inputs:
+        - taxi
 
   - id: month
     type: SELECT
     displayName: Select month
-    values: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"]
+    expression: "{{ kv('months')[inputs.taxi][inputs.year] }}"
     defaults: "01"
+    dependsOn:
+      inputs:
+        - taxi
+        - year
 
 variables:
   file: "{{inputs.taxi}}_tripdata_{{inputs.year}}-{{inputs.month}}.csv"
