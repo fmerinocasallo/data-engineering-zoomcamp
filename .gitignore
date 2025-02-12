@@ -204,7 +204,7 @@ terraform.rc
 
 # Ignore GCP keys
 gcp*creds.json
-04_gcp_kv.yaml
+02-workflow-orchestration/flows/04_gcp_kv.yaml
 
 # Ignore VSCode settings
 .vscode/settings.json
