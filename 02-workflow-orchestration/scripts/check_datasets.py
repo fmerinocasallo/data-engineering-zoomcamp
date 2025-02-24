@@ -31,7 +31,7 @@ def check_datasets():
     logger.info("Starting dataset availability check")
     start_year = 2019
     current_year = datetime.now().year
-    taxis = ["yellow", "green"]
+    taxis = ["yellow", "green", "fhv"]
     base_url = "https://github.com/DataTalksClub/nyc-tlc-data/releases/download"
     results = {taxi: {} for taxi in taxis}
 

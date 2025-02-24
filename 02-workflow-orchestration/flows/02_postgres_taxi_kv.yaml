@@ -2,7 +2,8 @@ id: 02_update_taxi_years_months_kv
 namespace: zoomcamp
 description: |
   Weekly check (Madrid timezone at midnight) to verify which monthly datasets
-  are available in the remote repository for yellow and green taxis and update the KV store.
+  are available in the remote repository for yellow and green taxis, and for
+  for hire vehicles, and update the KV store.
 
 concurrency:
   limit: 1
