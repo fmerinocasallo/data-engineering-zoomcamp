@@ -50,6 +50,12 @@ from {{ source('raw_nyc_tripdata', 'ext_green_taxi' ) }}
 - `select * from myproject.my_nyc_tripdata.ext_green_taxi`
 - `select * from dtc_zoomcamp_2025.raw_nyc_tripdata.green_taxi`
 
+#### Answer:
+:white_check_mark: `select * from myproject.raw_nyc_tripdata.ext_green_taxi`
+
+Note that:
+1. `env_var('DBT_BIGQUERY_PROJECT', 'dtc_zoomcamp_2025')` compiles to `myproject` because of `export DBT_BIGQUERY_PROJECT=myproject`.
+2. `env_var('DBT_BIGQUERY_SOURCE_DATASET', 'raw_nyc_tripdata')` compiles to `raw_nyc_tripdata` because `DBT_BIGQUERY_SOURCE_DATASET` is not defined.
 
 ### Question 2: dbt Variables & Dynamic Models
 
@@ -72,6 +78,8 @@ What would you change to accomplish that in a such way that command line argumen
 - Update the WHERE clause to `pickup_datetime >= CURRENT_DATE - INTERVAL '{{ var("days_back", env_var("DAYS_BACK", "30")) }}' DAY`
 - Update the WHERE clause to `pickup_datetime >= CURRENT_DATE - INTERVAL '{{ env_var("DAYS_BACK", var("days_back", "30")) }}' DAY`
 
+#### Answer:
+:white_check_mark: Update the WHERE clause to `pickup_datetime >= CURRENT_DATE - INTERVAL '{{ var("days_back", env_var("DAYS_BACK", "30")) }}' DAY`.
 
 ### Question 3: dbt Data Lineage and Execution
 
@@ -87,6 +95,10 @@ Select the option that does **NOT** apply for materializing `fct_taxi_monthly_zo
 - `dbt run --select +models/core/`
 - `dbt run --select models/staging/+`
 
+#### Answer:
+:white_check_mark: `dbt run --select models/staging/+`
+
+Note that `fct_taxi_monthly_zone_revenue.sql` is not located in the `models/staging` directory but in `models/core/`.
 
 ### Question 4: dbt Macros and Jinja
 
@@ -125,6 +137,11 @@ That all being said, regarding macro above, **select all statements that are tru
 - When using `stg`, it materializes in the dataset defined in `DBT_BIGQUERY_STAGING_DATASET`, or defaults to `DBT_BIGQUERY_TARGET_DATASET`
 - When using `staging`, it materializes in the dataset defined in `DBT_BIGQUERY_STAGING_DATASET`, or defaults to `DBT_BIGQUERY_TARGET_DATASET`
 
+#### Answer(s):
+:white_check_mark: Setting a value for  `DBT_BIGQUERY_TARGET_DATASET` env var is mandatory, or it'll fail to compile.
+:white_check_mark: When using `core`, it materializes in the dataset defined in `DBT_BIGQUERY_TARGET_DATASET`.
+:white_check_mark: When using `stg`, it materializes in the dataset defined in `DBT_BIGQUERY_STAGING_DATASET`, or defaults to `DBT_BIGQUERY_TARGET_DATASET`.
+:white_check_mark: When using `staging`, it materializes in the dataset defined in `DBT_BIGQUERY_STAGING_DATASET`, or defaults to `DBT_BIGQUERY_TARGET_DATASET`.
 
 ## Serious SQL
 
@@ -152,6 +169,186 @@ Considering the YoY Growth in 2020, which were the yearly quarters with the best
 - green: {best: 2020/Q1, worst: 2020/Q2}, yellow: {best: 2020/Q1, worst: 2020/Q2}
 - green: {best: 2020/Q1, worst: 2020/Q2}, yellow: {best: 2020/Q3, worst: 2020/Q4}
 
+#### Answer:
+:white_check_mark: green: {best: 2020/Q1, worst: 2020/Q2}, yellow: {best: 2020/Q1, worst: 2020/Q2}
+
+```
+-- Step 1: Add new dimensions (year, quarter, month)
+ALTER TABLE public.green_tripdata
+ADD COLUMN year INT,
+ADD COLUMN quarter INT,
+ADD COLUMN month INT;
+
+UPDATE public.green_tripdata
+SET year = EXTRACT(YEAR FROM lpep_pickup_datetime),
+    quarter = EXTRACT(QUARTER FROM lpep_pickup_datetime),
+    month = EXTRACT(MONTH FROM lpep_pickup_datetime);
+
+-- Step 2: Compute Quarterly Revenues for each year
+WITH GreenTaxiTrips AS (
+	SELECT
+		*,
+		row_number() over(partition by vendorid, lpep_pickup_datetime) as rn
+	FROM
+		public.green_tripdata
+	WHERE
+		vendorid IS NOT NULL
+        AND (PULocationID != '264')
+        AND (DOLocationID != '264')
+),
+
+QuarterlyRevenue AS (
+    SELECT
+        year,
+        quarter,
+        SUM(total_amount) AS quarterly_revenue
+    FROM
+        GreenTaxiTrips
+	WHERE
+		rn = 1
+    GROUP BY
+        year,
+        quarter
+),
+
+-- Step 3: Compute Quarterly YoY Revenue Growth using LAG function
+LaggedQuarterlyRevenue AS (
+    SELECT
+        year,
+        quarter,
+        quarterly_revenue,
+        LAG(quarterly_revenue, 4, 0) OVER (ORDER BY year, quarter) AS previous_year_quarterly_revenue
+    FROM
+        QuarterlyRevenue
+),
+
+YoYGrowth AS (
+    SELECT
+        year,
+        quarter,
+        quarterly_revenue,
+        (quarterly_revenue - previous_year_quarterly_revenue) * 100.0 / NULLIF(previous_year_quarterly_revenue, 0) AS yoy_growth_percentage
+    FROM
+        LaggedQuarterlyRevenue
+    WHERE year = 2020 -- Filter for 2020 data after calculating YoY growth
+),
+
+RankedYoYGrowth AS (
+  SELECT
+        year,
+        quarter,
+        quarterly_revenue,
+        yoy_growth_percentage,
+        RANK() OVER (ORDER BY yoy_growth_percentage DESC NULLS LAST) as yoy_growth_rank  -- Rank from best (highest growth) to worst (lowest growth)
+    FROM
+        YoYGrowth
+    WHERE yoy_growth_percentage IS NOT NULL -- Exclude NULLs for ranking
+)
+
+SELECT
+        year,
+        quarter,
+        (ROUND(yoy_growth_percentage::numeric, 2) || ' %') as yoy_growth_percentage,
+		yoy_growth_rank
+FROM RankedYoYGrowth
+ORDER BY yoy_growth_rank; -- Order chronologically for easy understanding
+```
+
+| year | quarter | yoy_growth_percentage | yoy_growth_rank |
+|---|---|---|---|
+| 2020 | 1 | -56.39 % | 1 |
+| 2020 | 4 | -84.28 % | 2 |
+| 2020 | 3 | -86.50 % | 3 |
+| 2020 | 2 | -92.76 % | 4 |
+
+```
+-- Step 1: Add new dimensions (year, quarter, month)
+ALTER TABLE public.yellow_tripdata
+ADD COLUMN year INT,
+ADD COLUMN quarter INT,
+ADD COLUMN month INT;
+
+UPDATE public.yellow_tripdata
+SET year = EXTRACT(YEAR FROM tpep_pickup_datetime),
+    quarter = EXTRACT(QUARTER FROM tpep_pickup_datetime),
+    month = EXTRACT(MONTH FROM tpep_pickup_datetime);
+
+-- Step 2: Compute Quarterly Revenues for each year
+WITH YellowTaxiTrips AS (
+	SELECT
+		*,
+		row_number() over(partition by vendorid, tpep_pickup_datetime) as rn
+	FROM
+		public.yellow_tripdata
+	WHERE
+		vendorid IS NOT NULL
+        AND (PULocationID != '264')
+        AND (DOLocationID != '264')
+),
+
+QuarterlyRevenue AS (
+    SELECT
+        year,
+        quarter,
+        SUM(total_amount) AS quarterly_revenue
+    FROM
+        YellowTaxiTrips
+	WHERE
+		rn = 1
+    GROUP BY
+        year,
+        quarter
+),
+
+-- Step 3: Compute Quarterly YoY Revenue Growth using LAG function
+LaggedQuarterlyRevenue AS (
+    SELECT
+        year,
+        quarter,
+        quarterly_revenue,
+        LAG(quarterly_revenue, 4, 0) OVER (ORDER BY year, quarter) AS previous_year_quarterly_revenue
+    FROM
+        QuarterlyRevenue
+),
+
+YoYGrowth AS (
+    SELECT
+        year,
+        quarter,
+        quarterly_revenue,
+        (quarterly_revenue - previous_year_quarterly_revenue) * 100.0 / NULLIF(previous_year_quarterly_revenue, 0) AS yoy_growth_percentage
+    FROM
+        LaggedQuarterlyRevenue
+    WHERE year = 2020 -- Filter for 2020 data after calculating YoY growth
+),
+
+RankedYoYGrowth AS (
+  SELECT
+        year,
+        quarter,
+        quarterly_revenue,
+        yoy_growth_percentage,
+        RANK() OVER (ORDER BY yoy_growth_percentage DESC NULLS LAST) as yoy_growth_rank  -- Rank from best (highest growth) to worst (lowest growth)
+    FROM
+        YoYGrowth
+    WHERE yoy_growth_percentage IS NOT NULL -- Exclude NULLs for ranking
+)
+
+SELECT
+        year,
+        quarter,
+        (ROUND(yoy_growth_percentage::numeric, 2) || ' %') as yoy_growth_percentage,
+		yoy_growth_rank
+FROM RankedYoYGrowth
+ORDER BY yoy_growth_rank; -- Order chronologically for easy understanding
+```
+
+| year | quarter | yoy_growth_percentage | yoy_growth_rank |
+|---|---|---|---|
+| 2020 | 1 | "-21.21 %" | 1 |
+| 2020 | 4 | "-70.43 %" | 2 |
+| 2020 | 3 | "-78.03 %" | 3 |
+| 2020 | 2 | "-92.26 %" | 4 |
 
 ### Question 6: P97/P95/P90 Taxi Monthly Fare
 
@@ -167,6 +364,96 @@ Now, what are the values of `p97`, `p95`, `p90` for Green Taxi and Yellow Taxi, 
 - green: {p97: 40.0, p95: 33.0, p90: 24.5}, yellow: {p97: 31.5, p95: 25.5, p90: 19.0}
 - green: {p97: 55.0, p95: 45.0, p90: 26.5}, yellow: {p97: 52.0, p95: 25.5, p90: 19.0}
 
+#### Answer:
+:white_check_mark: green: {p97: 55.0, p95: 45.0, p90: 26.5}, yellow: {p97: 31.5, p95: 25.5, p90: 19.0}
+
+```
+WITH GreenTaxiTrips AS (
+    SELECT
+        *,
+        row_number() over(partition by vendorid, lpep_pickup_datetime) as rn
+    FROM
+        public.green_tripdata
+    WHERE
+        vendorid IS NOT NULL
+        AND (PULocationID != '264')
+        AND (DOLocationID != '264')
+),
+
+ValidTrips AS (
+    SELECT
+        year,
+        month,
+        fare_amount
+    FROM
+        GreenTaxiTrips
+    WHERE
+        (rn = 1)
+        AND (year = 2020)
+        AND (month = 4)
+        AND (fare_amount > 0)
+        AND (trip_distance > 0)
+        AND (payment_type IN (1, 2)) -- Filter for valid trips (Credit Card or Cash)
+)
+
+SELECT
+    PERCENTILE_CONT(0.97) WITHIN GROUP (ORDER BY fare_amount) AS p97,
+    PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY fare_amount) AS p95,
+    PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY fare_amount) AS p90
+FROM
+    ValidTrips
+WHERE
+    (year = 2020)
+    AND (month = 4);
+```
+
+| p97 | p95 | p90 |
+|---|---|---|
+| 55 | 45.5 | 27 |
+
+```
+WITH YellowTaxiTrips AS (
+    SELECT
+        *,
+        row_number() over(partition by vendorid, tpep_pickup_datetime) as rn
+    FROM
+        public.yellow_tripdata
+    WHERE
+        vendorid IS NOT NULL
+        AND (PULocationID != '264')
+        AND (DOLocationID != '264')
+),
+
+ValidTrips AS (
+    SELECT
+        year,
+        month,
+        fare_amount
+    FROM
+        YellowTaxiTrips
+    WHERE
+        (rn = 1)
+        AND (year = 2020)
+        AND (month = 4)
+        AND (fare_amount > 0)
+        AND (trip_distance > 0)
+        AND (payment_type IN (1, 2)) -- Filter for valid trips (Credit Card or Cash)
+)
+
+SELECT
+    PERCENTILE_CONT(0.97) WITHIN GROUP (ORDER BY fare_amount) AS p97,
+    PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY fare_amount) AS p95,
+    PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY fare_amount) AS p90
+FROM
+    ValidTrips
+WHERE
+    (year = 2020)
+    AND (month = 4);
+```
+
+| p97 | p95 | p90 |
+|---|---|---|
+| 32.5 | 26 | 19 |
 
 ### Question 7: Top #Nth longest P90 travel time Location for FHV
 
@@ -188,6 +475,89 @@ For the Trips that **respectively** started from `Newark Airport`, `SoHo`, and `
 - LaGuardia Airport, Rosedale, Bath Beach
 - LaGuardia Airport, Yorkville East, Greenpoint
 
+#### Answer:
+:white_check_mark: LaGuardia Airport (LocationID = '1'), Chinatown (LocationID = '211'), Garment District (LocationID = '262')
+
+```
+-- Step 1: Add new dimensions (year, quarter, month)
+ALTER TABLE public.fhv_tripdata
+ADD COLUMN year INT,
+ADD COLUMN month INT;
+
+UPDATE public.fhv_tripdata
+SET year = EXTRACT(YEAR FROM pickup_datetime),
+    month = EXTRACT(MONTH FROM pickup_datetime);
+
+WITH TripDurations AS (
+    SELECT
+        year,
+        month,
+        PULocationID,
+        DOLocationID,
+        dropoff_datetime,
+        pickup_datetime,
+        EXTRACT(EPOCH FROM (dropoff_datetime - pickup_datetime)) AS trip_duration  -- Trip duration in seconds
+    FROM
+        public.fhv_tripdata
+    WHERE
+        dispatching_base_num IS NOT NULL
+        AND PULocationID != '264'
+        AND DOLocationID != '264'
+),
+
+TripDurationsP90 AS (
+    SELECT
+        year,
+        month,
+        PULocationID,
+        DOLocationID,
+        percentile_cont(0.9) WITHIN GROUP (ORDER BY trip_duration) AS trip_duration_p90
+    FROM 
+        TripDurations
+    WHERE 
+        PULocationID IN ('1', '211', '262')
+        AND (year = 2019)
+        AND (month = 11)
+    GROUP BY
+        year,
+        month,
+        PULocationID,
+        DOLocationID
+    ORDER BY
+        year,
+        month,
+        PULocationID,
+        DOLocationID
+),
+
+RankedTripDurations AS (
+    SELECT 
+        PULocationID,
+        DOLocationID,
+        trip_duration_p90,
+        RANK() OVER (PARTITION BY PULocationID ORDER BY trip_duration_p90 DESC) AS rnk
+    FROM 
+        TripDurationsP90
+)
+
+SELECT
+    PULocationID,
+    DOLocationID
+FROM 
+    RankedTripDurations
+WHERE 
+    rnk = 2
+ORDER BY
+    PULocationID,
+    DOLocationID;
+
+```
+
+| PULocationID | DOLocationID |
+|---|---|
+| 1 | 138 |
+| 211 | 45 |
+| 262 | 100 |
 
 ## Submitting the solutions
 
