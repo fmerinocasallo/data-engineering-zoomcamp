@@ -8,7 +8,7 @@ import logging
 from os import PathLike
 from pathlib import Path
 from re import match
-from typing import Callable, Dict, Literal, Tuple
+from typing import Dict, Tuple, Sequence, Iterable
 
 import click
 import pandas as pd
@@ -44,17 +44,21 @@ _logger = init_logger()
 
 
 # Alternative to_sql() *method* for DBs that support COPY FROM
-def psql_insert_copy(table, conn, keys, data_iter):
+def psql_insert_copy(
+    table: pd.io.sql.SQLTable,
+    conn: sa.engine.Engine | sa.engine.Connection,
+    keys: Sequence[str],
+    data_iter: Iterable,
+):
     """
     Execute SQL statement inserting data
 
     Parameters
     ----------
-    table : pandas.io.sql.SQLTable
-    conn : sqlalchemy.engine.Engine or sqlalchemy.engine.Connection
-    keys : list of str
-        Column names
-    data_iter : Iterable that iterates the values to be inserted
+    table : Object that represents the table to insert into.
+    conn : Object that represents the database engine or connection.
+    keys : List of column names to insert data into.
+    data_iter : Iterable that iterates over the values to be inserted.
     """
     # gets a DBAPI connection that can provide a cursor
     dbapi_conn = conn.connection
@@ -301,9 +305,9 @@ def data_clean(data: pd.DataFrame, dates: Tuple[datetime, datetime]) -> pd.DataF
 
 
 def data_ingest(
-        data_trips: pd.DataFrame,
-        data_zones: pd.DataFrame,
-        pg_params: Dict[str, str],
+    data_trips: pd.DataFrame,
+    data_zones: pd.DataFrame,
+    pg_params: Dict[str, str],
 ) -> None:
     """
     Ingests NYC taxi tabular data into a PostgreSQL database.
